@@ -2,10 +2,10 @@
 
 const esprima = require("esprima").parse;
 const fs = require("fs");
-const stringmap = require("./lib/stringmap");
+const assert = require("assert");
 const is = require("./lib/is");
 const traverse = require("./traverse");
-const assert = require("assert");
+const Scope = require("./scope");
 
 const src = fs.readFileSync("test-input.js");
 const ast = esprima(src, {
@@ -13,42 +13,33 @@ const ast = esprima(src, {
     range: true,
 });
 
-function spaces(n) {
-    return new Array(n + 1).join(" ");
+function constLet(t) {
+    return is.someof(t, ["const", "let"]);
 }
 
-function Scope(args) {
-    this.kind = args.kind;
-    this.node = args.node;
-    this.parent = args.parent;
-    this.children = [];
-    this.names = stringmap();
+function varConstLet(t) {
+    return is.someof(t, ["var", "const", "let"]);
+}
 
-    if (this.parent) {
-        this.parent.children.push(this);
-    }
+function isNonFunctionBlock(node) {
+    return node.type === "BlockStatement" && is.noneof(node.$parent.type, ["FunctionDeclaration", "FunctionExpression"]);
 }
-Scope.prototype.print = function(indent) {
-    indent = indent || 0;
-    console.log(spaces(indent) + this.node.type + ": " + this.names.keys());
-    this.children.forEach(function(c) {
-        c.print(indent + 2);
-    });
-};
-Scope.prototype.add = function(name, kind) {
-    const scope = (is.someof(kind, ["const", "var"]) ? this : this.closestHoistScope());
-    scope.names.set(name, kind);
+
+function isForWithConstLet(node) {
+    return node.type === "ForStatement" && node.init && node.init.type === "VariableDeclaration" && constLet(node.init.kind);
 }
-Scope.prototype.closestHoistScope = function() {
-    let scope = this;
-    while (scope.kind !== "hoist") {
-        scope = scope.parent;
-    }
-    return scope;
+
+function isForInWithConstLet(node) {
+    return node.type === "ForInStatement" && node.left.type === "VariableDeclaration" && constLet(node.left.kind);
+}
+
+function isFunction(node) {
+    return is.someof(node.type, ["FunctionDeclaration", "FunctionExpression"]);
 }
 
 traverse(ast, {pre: function(node) {
 //    console.log(node.type);
+    node.$scope = node.$parent ? node.$parent.$scope : null; // may be overridden
 
     if (node.type === "Program") {
         node.$scope = new Scope({
@@ -56,9 +47,13 @@ traverse(ast, {pre: function(node) {
             node: node,
             parent: null,
         });
-    } else if (node.type === "FunctionDeclaration") {
-        assert(node.id.type === "Identifier");
-        node.$parent.$scope.add(node.id.name, "fun");
+
+    } else if (isFunction(node)) {
+        if (node.id) {
+            assert(node.type === "FunctionDeclaration"); // no support for named function expressions yet
+            assert(node.id.type === "Identifier");
+            node.$parent.$scope.add(node.id.name, "fun");
+        }
 
         node.$scope = new Scope({
             kind: "hoist",
@@ -69,21 +64,22 @@ traverse(ast, {pre: function(node) {
         node.params.forEach(function(param) {
             node.$scope.add(param.name, "param");
         });
+
     } else if (node.type === "VariableDeclaration") {
-        assert(is.someof(node.kind, ["var", "const", "let"]));
-        node.$scope = node.$parent.$scope;
+        assert(varConstLet(node.kind));
         node.declarations.forEach(function(declarator) {
             assert(declarator.type === "VariableDeclarator");
             node.$scope.add(declarator.id.name, node.kind);
         });
-    } else if (node.type === "BlockStatement" && is.noneof(node.$parent.type, ["FunctionDeclaration", "FunctionExpression"])) {
+
+    } else if (isNonFunctionBlock(node) || isForWithConstLet(node) || isForInWithConstLet(node)) {
         node.$scope = new Scope({
             kind: "block",
             node: node,
             parent: node.$parent.$scope,
         });
+
     } else {
-        node.$scope = node.$parent.$scope;
     }
 }});
 

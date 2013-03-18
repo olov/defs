@@ -6,6 +6,10 @@ function named_fn(a, b) {
         let j = 2;
         console.log(x);
     }
+    for (let fa in [1,2,3,4,5]) {
+        var fb = 3;
+        console.log(fa);
+    }
     var y,z;
 }
 named_fn();
