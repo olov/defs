@@ -56,6 +56,13 @@ traverse(ast, {pre: function(node) {
         node.params.forEach(function(param) {
             node.$scope.add(param.name, "param");
         });
+    } else if (node.type === "VariableDeclaration") {
+        assert(is.someof(node.kind, ["var", "const", "let"]));
+        node.$scope = node.$parent.$scope;
+        node.declarations.forEach(function(declarator) {
+            assert(declarator.type === "VariableDeclarator");
+            node.$scope.add(declarator.id.name, node.kind);
+        });
     } else {
         node.$scope = node.$parent.$scope;
     }
