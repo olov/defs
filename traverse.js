@@ -1,3 +1,5 @@
+"use strict";
+
 const is = require("./lib/is");
 
 function traverse(root, options) {

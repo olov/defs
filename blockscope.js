@@ -1,9 +1,11 @@
+"use strict";
+
 const esprima = require("esprima").parse;
 const fs = require("fs");
 const stringmap = require("./lib/stringmap");
+const is = require("./lib/is");
 const traverse = require("./traverse");
 const assert = require("assert");
-
 
 const src = fs.readFileSync("test-input.js");
 const ast = esprima(src, {
@@ -41,6 +43,7 @@ traverse(ast, {pre: function(node) {
 
     if (node.type === "Program") {
         node.$scope = new Scope({
+            kind: "hoist",
             node: node,
             parent: null,
         });
@@ -49,6 +52,7 @@ traverse(ast, {pre: function(node) {
         node.$parent.$scope.add(node.id.name, "fun");
 
         node.$scope = new Scope({
+            kind: "hoist",
             node: node,
             parent: node.$parent.$scope,
         });
@@ -62,6 +66,12 @@ traverse(ast, {pre: function(node) {
         node.declarations.forEach(function(declarator) {
             assert(declarator.type === "VariableDeclarator");
             node.$scope.add(declarator.id.name, node.kind);
+        });
+    } else if (node.type === "BlockStatement" && is.noneof(node.$parent.type, ["FunctionDeclaration", "FunctionExpression"])) {
+        node.$scope = new Scope({
+            kind: "block",
+            node: node,
+            parent: node.$parent.$scope,
         });
     } else {
         node.$scope = node.$parent.$scope;
