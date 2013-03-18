@@ -1,4 +1,4 @@
-const is = require("../mcs/clientng/app/lib/is");
+const is = require("./lib/is");
 
 function traverse(root, options) {
     options = options || {};
