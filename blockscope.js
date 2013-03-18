@@ -18,6 +18,7 @@ function spaces(n) {
 }
 
 function Scope(args) {
+    this.kind = args.kind;
     this.node = args.node;
     this.parent = args.parent;
     this.children = [];
@@ -35,7 +36,15 @@ Scope.prototype.print = function(indent) {
     });
 };
 Scope.prototype.add = function(name, kind) {
-    this.names.set(name, kind);
+    const scope = (is.someof(kind, ["const", "var"]) ? this : this.closestHoistScope());
+    scope.names.set(name, kind);
+}
+Scope.prototype.closestHoistScope = function() {
+    let scope = this;
+    while (scope.kind !== "hoist") {
+        scope = scope.parent;
+    }
+    return scope;
 }
 
 traverse(ast, {pre: function(node) {
@@ -78,7 +87,7 @@ traverse(ast, {pre: function(node) {
     }
 }});
 
-var rootScope = ast.$scope;
+const rootScope = ast.$scope;
 rootScope.print();
 //console.dir(rootScope);
 
