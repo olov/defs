@@ -151,6 +151,7 @@ function convertConstLets(node) {
 
             const name = declaration.id.name;
 
+            // rename to avoid shadowing existing references to other variable with the same name
             let rename = false;
             traverse(hoistScope.node, {pre: function(node) {
                 if (node.$references &&
@@ -162,6 +163,7 @@ function convertConstLets(node) {
                 }
             }});
 
+            // rename due to the name being occupied in the hoisted scope (i.e. const|let used to shadow)
             if (origScope !== hoistScope && hoistScope.hasOwn(name)) {
                 rename = true;
             }
@@ -179,6 +181,8 @@ function convertConstLets(node) {
                 });
             }
 
+            // updated all existing references to the variable
+            // TODO is node.$parent sufficient (considering for loop init not parent of body)?
             traverse(node.$parent, {pre: function(node) {
                 if (node.$references === origScope && node.name === name) {
 //                    console.log(fmt("updated ref for {0} to {1}", node.name, newName));
