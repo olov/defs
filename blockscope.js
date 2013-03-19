@@ -187,7 +187,7 @@ const rootScope = ast.$scope;
 //console.dir(rootScope);
 
 const transformedSrc = alter(src, changes)
-console.log(transformedSrc);
+process.stdout.write(transformedSrc);
 
 //console.dir(ast);
 
