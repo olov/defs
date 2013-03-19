@@ -4,6 +4,7 @@ const esprima = require("esprima").parse;
 const fs = require("fs");
 const assert = require("assert");
 const is = require("./lib/is");
+const fmt = require("./lib/fmt");
 const traverse = require("./traverse");
 const Scope = require("./scope");
 
@@ -37,8 +38,19 @@ function isFunction(node) {
     return is.someof(node.type, ["FunctionDeclaration", "FunctionExpression"]);
 }
 
-traverse(ast, {pre: function(node) {
-//    console.log(node.type);
+function isReference(node) {
+    return node.type === "Identifier" &&
+        !(node.$parent.type === "VariableDeclarator" && node.$parent.id === node) && // var|let|const $
+        !(node.$parent.type === "MemberExpression" && node.$parent.property === node) && // obj.$
+        !(node.$parent.type === "Property" && node.$parent.key === node) && // {$: ...}
+        !(node.$parent.type === "LabeledStatement" && node.$parent.label === node) && // $: ...
+        !(node.$parent.type === "CatchClause" && node.$parent.param === node) && // catch($)
+        !(isFunction(node.$parent) && node.$parent.id === node) && // function $(..
+        !(isFunction(node.$parent) && is.someof(node, node.$parent.params)) && // function f($)..
+        true;
+}
+
+function createScopes(node) {
     node.$scope = node.$parent ? node.$parent.$scope : null; // may be overridden
 
     if (node.type === "Program") {
@@ -80,8 +92,20 @@ traverse(ast, {pre: function(node) {
         });
 
     } else {
+        // TODO catch(e)
     }
-}});
+}
+
+function setupReferences(node) {
+    if (!isReference(node)) {
+        return;
+    }
+    node.$references = node.$scope.lookup(node.name);
+//    console.log(fmt("line {0}, col {1}: {2} - {3}", node.loc.start.line, node.loc.start.column, node.name, node.$references && node.$references.node.type));
+}
+
+traverse(ast, {pre: createScopes});
+traverse(ast, {pre: setupReferences});
 
 const rootScope = ast.$scope;
 rootScope.print();

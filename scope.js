@@ -1,5 +1,6 @@
 "use strict";
 
+const assert = require("assert");
 const stringmap = require("./lib/stringmap");
 const is = require("./lib/is");
 
@@ -8,6 +9,10 @@ function spaces(n) {
 }
 
 function Scope(args) {
+    assert(is.someof(args.kind, ["hoist", "block"]));
+    assert(is.object(args.node));
+    assert(args.parent === null || is.object(args.parent));
+
     this.kind = args.kind;
     this.node = args.node;
     this.parent = args.parent;
@@ -39,5 +44,14 @@ Scope.prototype.closestHoistScope = function() {
     }
     return scope;
 }
+
+Scope.prototype.lookup = function(name) {
+    for (let scope = this; scope; scope = scope.parent) {
+        if (scope.names.has(name)) {
+            return scope;
+        }
+    }
+    return null;
+};
 
 module.exports = Scope;
