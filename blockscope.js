@@ -8,7 +8,7 @@ const fmt = require("./lib/fmt");
 const traverse = require("./traverse");
 const Scope = require("./scope");
 
-const src = fs.readFileSync("test-input.js");
+const src = String(fs.readFileSync("test-input.js"));
 const ast = esprima(src, {
     loc: true,
     range: true,
@@ -104,8 +104,41 @@ function setupReferences(node) {
 //    console.log(fmt("line {0}, col {1}: {2} - {3}", node.loc.start.line, node.loc.start.column, node.name, node.$references && node.$references.node.type));
 }
 
+// TODO make robust
+let cnt = 0;
+function unique(name) {
+    return name + "$" + String(++cnt);
+}
+
+/*
+Change all let and const declarations to var
+optionally rename (if name is already present in hoisted scope)
+add name to hoisted scope
+remove name from
+ */
+function convertConstLets(node) {
+    if (node.type === "VariableDeclaration" && constLet(node.kind)) {
+        const hoistScope = node.$scope.closestHoistScope();
+
+        node.declarations.forEach(function(declaration) {
+            assert(declaration.type === "VariableDeclarator");
+
+            const name = declaration.id.name;
+
+            node.$scope.remove(name);
+            if (hoistScope.hasOwn(name)) {
+                hoistScope.add(unique(name), "var");
+            } else {
+                hoistScope.add(name, "var");
+            }
+        });
+//        console.log(srcFor(node));
+    }
+}
+
 traverse(ast, {pre: createScopes});
 traverse(ast, {pre: setupReferences});
+traverse(ast, {pre: convertConstLets});
 
 const rootScope = ast.$scope;
 rootScope.print();
@@ -113,3 +146,7 @@ rootScope.print();
 
 
 //console.dir(ast);
+
+function srcFor(node) {
+    return src.slice(node.range[0], node.range[1]);
+}

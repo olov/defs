@@ -26,7 +26,11 @@ function Scope(args) {
 
 Scope.prototype.print = function(indent) {
     indent = indent || 0;
-    console.log(spaces(indent) + this.node.type + ": " + this.names.keys());
+    const scope = this;
+    const names = this.names.keys().map(function(name) {
+        return name + " [" + scope.names.get(name) + "]";
+    }).join(", ");
+    console.log(spaces(indent) + this.node.type + ": " + names);
     this.children.forEach(function(c) {
         c.print(indent + 2);
     });
@@ -35,6 +39,15 @@ Scope.prototype.print = function(indent) {
 Scope.prototype.add = function(name, kind) {
     const scope = (is.someof(kind, ["const", "let"]) ? this : this.closestHoistScope());
     scope.names.set(name, kind);
+}
+
+Scope.prototype.remove = function(name) {
+    assert(this.names.has(name));
+    this.names.delete(name);
+}
+
+Scope.prototype.hasOwn = function(name) {
+    return this.names.has(name);
 }
 
 Scope.prototype.closestHoistScope = function() {

@@ -1,6 +1,7 @@
 "use strict";
 var x;
 function named_fn(a, b) {
+    let unique = 1;
     for (x = 3; x < 10; x++) {
         var i = 1;
         let j = 2;
