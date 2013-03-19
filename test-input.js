@@ -4,12 +4,12 @@ function named_fn(a, b) {
     let unique = 1;
     for (x = 3; x < 10; x++) {
         var i = 1;
-        let j = 2;
-        console.log(x);
+        let y = 2;
+        console.log(y);
     }
     for (let fa in [1,2,3,4,5]) {
-        var fb = 3;
-        console.log(fa);
+        const y = 3;
+        console.log(y);
     }
     var y,z;
 }

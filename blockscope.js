@@ -7,6 +7,7 @@ const is = require("./lib/is");
 const fmt = require("./lib/fmt");
 const traverse = require("./traverse");
 const Scope = require("./scope");
+const alter = require("./alter");
 
 const src = String(fs.readFileSync("test-input.js"));
 const ast = esprima(src, {
@@ -116,21 +117,51 @@ optionally rename (if name is already present in hoisted scope)
 add name to hoisted scope
 remove name from
  */
+const changes = [];
 function convertConstLets(node) {
     if (node.type === "VariableDeclaration" && constLet(node.kind)) {
         const hoistScope = node.$scope.closestHoistScope();
+        const origScope = node.$scope;
+
+        changes.push({
+            start: node.range[0],
+            end: node.range[0] + node.kind.length,
+            str: "var",
+        });
 
         node.declarations.forEach(function(declaration) {
             assert(declaration.type === "VariableDeclarator");
 
             const name = declaration.id.name;
 
-            node.$scope.remove(name);
-            if (hoistScope.hasOwn(name)) {
-                hoistScope.add(unique(name), "var");
-            } else {
-                hoistScope.add(name, "var");
+            origScope.remove(name);
+            const newName = (hoistScope.hasOwn(name) ? unique(name) : name);
+            hoistScope.add(newName, "var");
+
+            if (newName !== name) {
+                changes.push({
+                    start: declaration.id.range[0],
+                    end: declaration.id.range[1],
+                    str: newName,
+                });
             }
+
+            traverse(node.$parent, {pre: function(node) {
+                if (node.$references === origScope && node.name === name) {
+                    console.log(fmt("updated ref for {0} to {1}", node.name, newName));
+
+                    node.$references = hoistScope;
+
+                    if (node.name !== newName) {
+                        node.name = newName;
+                        changes.push({
+                            start: node.range[0],
+                            end: node.range[1],
+                            str: newName,
+                        });
+                    }
+                }
+            }});
         });
 //        console.log(srcFor(node));
     }
@@ -141,9 +172,11 @@ traverse(ast, {pre: setupReferences});
 traverse(ast, {pre: convertConstLets});
 
 const rootScope = ast.$scope;
-rootScope.print();
+//rootScope.print();
 //console.dir(rootScope);
 
+const transformedSrc = alter(src, changes)
+console.log(transformedSrc);
 
 //console.dir(ast);
 
