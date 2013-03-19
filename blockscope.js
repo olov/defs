@@ -9,7 +9,18 @@ const traverse = require("./traverse");
 const Scope = require("./scope");
 const alter = require("./alter");
 
-const src = String(fs.readFileSync("test-input.js"));
+if (process.argv.length <= 2) {
+    console.log("USAGE: node --harmony blockscope.js file.js");
+    process.exit(-1);
+}
+const filename = process.argv[2];
+
+if (!fs.existsSync(filename)) {
+    console.log(fmt("error: file not found <{0}>", filename));
+    process.exit(-1);
+}
+
+const src = String(fs.readFileSync(filename));
 const ast = esprima(src, {
     loc: true,
     range: true,
@@ -148,7 +159,7 @@ function convertConstLets(node) {
 
             traverse(node.$parent, {pre: function(node) {
                 if (node.$references === origScope && node.name === name) {
-                    console.log(fmt("updated ref for {0} to {1}", node.name, newName));
+//                    console.log(fmt("updated ref for {0} to {1}", node.name, newName));
 
                     node.$references = hoistScope;
 
