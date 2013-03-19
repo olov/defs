@@ -14,25 +14,28 @@ function traverse(root, options) {
 
         node.$parent = parent;
 
+        let res = undefined;
         if (pre) {
-            pre(node);
+            res = pre(node);
         }
 
-        const props = Object.keys(node).filter(function(prop) {
-            return prop[0] !== "$";
-        });
+        if (res !== false) {
+            const props = Object.keys(node).filter(function(prop) {
+                return prop[0] !== "$";
+            });
 
-        props.forEach(function(prop) {
-            var child = node[prop];
+            props.forEach(function(prop) {
+                var child = node[prop];
 
-            if (Array.isArray(child)) {
-                child.forEach(function(child) {
+                if (Array.isArray(child)) {
+                    child.forEach(function(child) {
+                        visit(child, node);
+                    });
+                } else {
                     visit(child, node);
-                });
-            } else {
-                visit(child, node);
-            }
-        });
+                }
+            });
+        }
 
         if (post) {
             post(node);

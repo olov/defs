@@ -58,6 +58,19 @@ Scope.prototype.closestHoistScope = function() {
     return scope;
 }
 
+Scope.prototype.isInnerScopeOf = function(outer) {
+    // TODO handle metaglobal scope differently
+    if (outer === null) {
+        return true;
+    }
+    for (let scope = this.parent; scope; scope = scope.parent) {
+        if (scope === outer) {
+            return true;
+        }
+    }
+    return false;
+};
+
 Scope.prototype.lookup = function(name) {
     for (let scope = this; scope; scope = scope.parent) {
         if (scope.names.has(name)) {

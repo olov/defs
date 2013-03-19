@@ -124,16 +124,22 @@ function unique(name) {
 
 /*
 Change all let and const declarations to var
-optionally rename (if name is already present in hoisted scope)
+optionally rename:
+  if name is already present in hoisted scope
+  if name is a reference that would otherwise get shadowed
 add name to hoisted scope
 remove name from
  */
+
+// TODO for loops init and body props are parallell to each other but init scope is outer that of body
+// TODO is this a problem?
 const changes = [];
 function convertConstLets(node) {
     if (node.type === "VariableDeclaration" && constLet(node.kind)) {
         const hoistScope = node.$scope.closestHoistScope();
         const origScope = node.$scope;
 
+        // text change const|let => var
         changes.push({
             start: node.range[0],
             end: node.range[0] + node.kind.length,
@@ -145,10 +151,26 @@ function convertConstLets(node) {
 
             const name = declaration.id.name;
 
+            let rename = false;
+            traverse(hoistScope.node, {pre: function(node) {
+                if (node.$references &&
+                    node.name === name &&
+                    node.$references !== origScope &&
+                    hoistScope.isInnerScopeOf(node.$references)) {
+//                        console.log("rename due to shadowing: " + name);
+                    rename = true;
+                }
+            }});
+
+            if (origScope !== hoistScope && hoistScope.hasOwn(name)) {
+                rename = true;
+            }
+
             origScope.remove(name);
-            const newName = (hoistScope.hasOwn(name) ? unique(name) : name);
+            const newName = (rename ? unique(name) : name);
             hoistScope.add(newName, "var");
 
+            // textchange var x => var x$1
             if (newName !== name) {
                 changes.push({
                     start: declaration.id.range[0],
@@ -163,6 +185,7 @@ function convertConstLets(node) {
 
                     node.$references = hoistScope;
 
+                    // textchange reference x => x$1
                     if (node.name !== newName) {
                         node.name = newName;
                         changes.push({
