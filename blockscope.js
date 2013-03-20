@@ -60,7 +60,8 @@ function isLoop(node) {
 }
 
 function isReference(node) {
-    return node.type === "Identifier" &&
+    return node.$refToScope ||
+        node.type === "Identifier" &&
         !(node.$parent.type === "VariableDeclarator" && node.$parent.id === node) && // var|let|const $
         !(node.$parent.type === "MemberExpression" && node.$parent.property === node) && // obj.$
         !(node.$parent.type === "Property" && node.$parent.key === node) && // {$: ...}
@@ -69,6 +70,12 @@ function isReference(node) {
         !(isFunction(node.$parent) && node.$parent.id === node) && // function $(..
         !(isFunction(node.$parent) && is.someof(node, node.$parent.params)) && // function f($)..
         true;
+}
+
+function isLvalue(node) {
+    return isReference(node) &&
+        ((node.$parent.type === "AssignmentExpression" && node.$parent.left === node) ||
+            (node.$parent.type === "UpdateExpression" && node.$parent.argument === node));
 }
 
 function createScopes(node) {
@@ -179,7 +186,7 @@ function convertConstLets(node) {
             // rename to avoid shadowing existing references to other variable with the same name
             let rename = false;
             traverse(hoistScope.node, {pre: function(node) {
-                if (node.$refToScope &&
+                if (isReference(node) &&
                     node.$refToScope !== origScope &&
                     node.name === name &&
                     hoistScope.isInnerScopeOf(node.$refToScope)) {
@@ -250,7 +257,7 @@ function detectLoopClosuresPre(node) {
         return;
     }
 
-    if (node.$refToScope && isConstLet(node.$refToScope.names.get(node.name))) {
+    if (isReference(node) && isConstLet(node.$refToScope.names.get(node.name))) {
         let n = node.$refToScope.node;
 
         // node is an identifier
@@ -300,12 +307,21 @@ function detectLoopClosuresPost(node) {
     }
 }
 
+function detectConstAssignment(node) {
+    if (isLvalue(node)) {
+        const scope = node.$scope.lookup(node.name);
+        if (scope && scope.names.get(node.name) === "const") {
+            error(getline(node), "can't assign to const variable {0}", node.name);
+        }
+    }
+}
 
 
 traverse(ast, {pre: createScopes});
 traverse(ast, {pre: setupReferences});
 //ast.$scope.print(); process.exit(-1);
 traverse(ast, {pre: detectLoopClosuresPre, post: detectLoopClosuresPost});
+traverse(ast, {pre: detectConstAssignment});
 if (error.any) {
     process.exit(-1);
 }
