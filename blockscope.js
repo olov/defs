@@ -31,12 +31,12 @@ function getline(node) {
     return node.loc.start.line;
 }
 
-function constLet(t) {
-    return is.someof(t, ["const", "let"]);
+function isConstLet(kind) {
+    return is.someof(kind, ["const", "let"]);
 }
 
-function varConstLet(t) {
-    return is.someof(t, ["var", "const", "let"]);
+function isVarConstLet(kind) {
+    return is.someof(kind, ["var", "const", "let"]);
 }
 
 function isNonFunctionBlock(node) {
@@ -44,11 +44,11 @@ function isNonFunctionBlock(node) {
 }
 
 function isForWithConstLet(node) {
-    return node.type === "ForStatement" && node.init && node.init.type === "VariableDeclaration" && constLet(node.init.kind);
+    return node.type === "ForStatement" && node.init && node.init.type === "VariableDeclaration" && isConstLet(node.init.kind);
 }
 
 function isForInWithConstLet(node) {
-    return node.type === "ForInStatement" && node.left.type === "VariableDeclaration" && constLet(node.left.kind);
+    return node.type === "ForInStatement" && node.left.type === "VariableDeclaration" && isConstLet(node.left.kind);
 }
 
 function isFunction(node) {
@@ -105,7 +105,7 @@ function createScopes(node) {
 
     } else if (node.type === "VariableDeclaration") {
         // Variable declarations names goes in current scope
-        assert(varConstLet(node.kind));
+        assert(isVarConstLet(node.kind));
         node.declarations.forEach(function(declarator) {
             assert(declarator.type === "VariableDeclarator");
             node.$scope.add(declarator.id.name, node.kind);
@@ -160,7 +160,7 @@ remove name from
 // TODO is this a problem?
 const changes = [];
 function convertConstLets(node) {
-    if (node.type === "VariableDeclaration" && constLet(node.kind)) {
+    if (node.type === "VariableDeclaration" && isConstLet(node.kind)) {
         const hoistScope = node.$scope.closestHoistScope();
         const origScope = node.$scope;
 
@@ -250,7 +250,7 @@ function detectLoopClosuresPre(node) {
         return;
     }
 
-    if (node.$references && constLet(node.$references.names.get(node.name))) {
+    if (node.$references && isConstLet(node.$references.names.get(node.name))) {
         let n = node.$references.node;
 
         // node is an identifier

@@ -12,7 +12,9 @@ function traverse(root, options) {
             return;
         }
 
-        node.$parent = parent;
+        if (!is.in(node, "$parent")) {
+            node.$parent = parent;
+        }
 
         let res = undefined;
         if (pre) {
