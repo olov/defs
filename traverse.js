@@ -22,21 +22,21 @@ function traverse(root, options) {
         }
 
         if (res !== false) {
-            const props = Object.keys(node).filter(function(prop) {
-                return prop[0] !== "$";
-            });
+            for (let prop in node) {
+                if (prop[0] === "$") {
+                    continue;
+                }
 
-            props.forEach(function(prop) {
                 var child = node[prop];
 
                 if (Array.isArray(child)) {
-                    child.forEach(function(child) {
-                        visit(child, node);
-                    });
+                    for (let i = 0; i < child.length; i++) {
+                        visit(child[i], node);
+                    }
                 } else {
                     visit(child, node);
                 }
-            });
+            }
         }
 
         if (post) {
