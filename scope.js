@@ -3,6 +3,7 @@
 const assert = require("assert");
 const stringmap = require("./lib/stringmap");
 const is = require("./lib/is");
+const error = require("./error");
 
 function spaces(n) {
     return new Array(n + 1).join(" ");
@@ -36,8 +37,24 @@ Scope.prototype.print = function(indent) {
     });
 };
 
-Scope.prototype.add = function(name, kind) {
-    const scope = (is.someof(kind, ["const", "let"]) ? this : this.closestHoistScope());
+Scope.prototype.add = function(name, kind, node) {
+    // TODO catch-param
+    assert(is.someof(kind, ["fun", "param", "var", "const", "let"]));
+
+    const isntConstLet = is.noneof(kind, ["const", "let"]);
+    let scope = this;
+
+    if (isntConstLet) {
+        while (scope.kind !== "hoist") {
+            if (scope.names.has(name)) {
+                return error(node.loc.start.line, "{0} is already declared", name);
+            }
+            scope = scope.parent;
+        }
+    }
+    if (scope.names.has(name)) {
+        return error(node.loc.start.line, "{0} is already declared", name);
+    }
     scope.names.set(name, kind);
 }
 

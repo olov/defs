@@ -90,7 +90,7 @@ function createScopes(node) {
         if (node.id) {
             assert(node.type === "FunctionDeclaration"); // no support for named function expressions yet
             assert(node.id.type === "Identifier");
-            node.$parent.$scope.add(node.id.name, "fun");
+            node.$parent.$scope.add(node.id.name, "fun", node.id);
         }
 
         node.$scope = new Scope({
@@ -100,7 +100,7 @@ function createScopes(node) {
         });
 
         node.params.forEach(function(param) {
-            node.$scope.add(param.name, "param");
+            node.$scope.add(param.name, "param", param);
         });
 
     } else if (node.type === "VariableDeclaration") {
@@ -108,7 +108,7 @@ function createScopes(node) {
         assert(isVarConstLet(node.kind));
         node.declarations.forEach(function(declarator) {
             assert(declarator.type === "VariableDeclarator");
-            node.$scope.add(declarator.id.name, node.kind);
+            node.$scope.add(declarator.id.name, node.kind, declarator.id);
         });
 
     } else if (isForWithConstLet(node) || isForInWithConstLet(node)) {
@@ -195,7 +195,7 @@ function convertConstLets(node) {
 
             origScope.remove(name);
             const newName = (rename ? unique(name) : name);
-            hoistScope.add(newName, "var");
+            hoistScope.add(newName, "var", declaration.id);
 
             // textchange var x => var x$1
             if (newName !== name) {
