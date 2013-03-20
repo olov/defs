@@ -7,23 +7,19 @@ function slurp(filename) {
 }
 
 const tests = fs.readdirSync("tests").filter(function(filename) {
-    return !/-out\.js$/.test(filename);
+    return !/-out\.js$/.test(filename) && !/-stderr$/.test(filename);
 });
 
 function run(test) {
     const noSuffix = test.slice(0,-3);
     exec(fmt("node --harmony blockscope tests/{0}", test), function (error, stdout, stderr) {
-        if (error) {
-            console.log("error: " + error);
-            process.exit(-1);
-        }
         if (stderr) {
-            if (stderr !== slurp(fmt("tests/{0}-err", noSuffix))) {
+            if (stderr !== slurp(fmt("tests/{0}-stderr", noSuffix))) {
                 console.log(fmt("FAIL stderr {0}", test));
                 process.stdout.write(stderr);
 
                 console.log("\nEXPECTED:");
-                process.stdout.write(slurp(fmt("tests/{0}-err", noSuffix)));
+                process.stdout.write(slurp(fmt("tests/{0}-stderr", noSuffix)));
             }
         }
         if (stdout) {
