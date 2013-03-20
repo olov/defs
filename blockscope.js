@@ -50,6 +50,10 @@ function isFunction(node) {
     return is.someof(node.type, ["FunctionDeclaration", "FunctionExpression"]);
 }
 
+function isLoop(node) {
+    return is.someof(node.type, ["ForStatement", "ForInStatement", "WhileStatement", "DoWhileStatement"]);
+}
+
 function isReference(node) {
     return node.type === "Identifier" &&
         !(node.$parent.type === "VariableDeclarator" && node.$parent.id === node) && // var|let|const $
@@ -66,6 +70,8 @@ function createScopes(node) {
     node.$scope = node.$parent ? node.$parent.$scope : null; // may be overridden
 
     if (node.type === "Program") {
+        // Top-level program is a scope
+        // There's no block-scope under it
         node.$scope = new Scope({
             kind: "hoist",
             node: node,
@@ -73,6 +79,9 @@ function createScopes(node) {
         });
 
     } else if (isFunction(node)) {
+        // Function is a scope, with params in it
+        // There's no block-scope under it
+        // Function name goes in parent scope
         if (node.id) {
             assert(node.type === "FunctionDeclaration"); // no support for named function expressions yet
             assert(node.id.type === "Identifier");
@@ -90,13 +99,24 @@ function createScopes(node) {
         });
 
     } else if (node.type === "VariableDeclaration") {
+        // Variable declarations names goes in current scope
         assert(varConstLet(node.kind));
         node.declarations.forEach(function(declarator) {
             assert(declarator.type === "VariableDeclarator");
             node.$scope.add(declarator.id.name, node.kind);
         });
 
-    } else if (isNonFunctionBlock(node) || isForWithConstLet(node) || isForInWithConstLet(node)) {
+    } else if (isForWithConstLet(node) || isForInWithConstLet(node)) {
+        // For(In) loop with const|let declaration is a scope, with declaration in it
+        // There may be a block-scope under it
+        node.$scope = new Scope({
+            kind: "block",
+            node: node,
+            parent: node.$parent.$scope,
+        });
+
+    } else if (isNonFunctionBlock(node)) {
+        // A block node is a scope unless parent is a function
         node.$scope = new Scope({
             kind: "block",
             node: node,
@@ -205,16 +225,84 @@ function convertConstLets(node) {
     }
 }
 
+let outermostLoop = null;
+let functions = [];
+function detectLoopClosuresPre(node) {
+    if (outermostLoop === null && isLoop(node)) {
+        outermostLoop = node;
+    }
+    if (!outermostLoop) {
+        // not inside loop
+        return;
+    }
+
+    // collect function-chain (as long as we're inside a loop)
+    if (isFunction(node)) {
+        functions.push(node);
+    }
+    if (functions.length === 0) {
+        // not inside function
+        return;
+    }
+
+    let scope = node.$references; // non-null if referencing identifier
+    if (scope && constLet(scope.names.get(node.name))) {
+        console.log(node.name);
+        // node is an identifier
+        // scope refers to the scope where the variable is defined
+        // loop ..-> function ..-> node
+
+        let ok = true;
+        while (scope) {
+//            scope.print();
+            if (scope.node === functions[functions.length - 1]) {
+                // we're ok (function-local)
+                break;
+            }
+            if (scope.node === outermostLoop) {
+                // not ok (between loop and function)
+                ok = false;
+                break;
+            }
+            scope = scope.parent;
+        }
+        if (ok) {
+            console.log("ok loop + closure: " + node.name);
+        } else {
+            console.log("not ok loop + closure: " + node.name);
+        }
+
+
+        /*
+        walk the scopes, starting from innermostFunction, ending at outermostLoop
+        if the referenced scope is somewhere in-between, then we have an issue
+        if the referenced scope is inside innermostFunction, then no problem (function-local const|let)
+        if the referenced scope is outside outermostLoop, then no problem (const|let external to the loop)
+
+         */
+    }
+}
+
+function detectLoopClosuresPost(node) {
+    if (outermostLoop === node) {
+        outermostLoop = null;
+    }
+    if (isFunction(node)) {
+        functions.pop();
+    }
+}
+
+
+
 traverse(ast, {pre: createScopes});
 traverse(ast, {pre: setupReferences});
+ast.$scope.print(); process.exit(-1);
+traverse(ast, {pre: detectLoopClosuresPre, post: detectLoopClosuresPost});
 traverse(ast, {pre: convertConstLets});
 
-const rootScope = ast.$scope;
-//rootScope.print();
-//console.dir(rootScope);
 
 const transformedSrc = alter(src, changes)
-process.stdout.write(transformedSrc);
+//process.stdout.write(transformedSrc);
 
 //console.dir(ast);
 
