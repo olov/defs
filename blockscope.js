@@ -137,8 +137,8 @@ function setupReferences(node) {
     if (!isReference(node)) {
         return;
     }
-    node.$references = node.$scope.lookup(node.name);
-//    console.log(fmt("line {0}, col {1}: {2} - {3}", node.loc.start.line, node.loc.start.column, node.name, node.$references && node.$references.node.type));
+    const scope = node.$scope.lookup(node.name);
+    node.$refToScope = scope;
 }
 
 // TODO make robust
@@ -179,10 +179,10 @@ function convertConstLets(node) {
             // rename to avoid shadowing existing references to other variable with the same name
             let rename = false;
             traverse(hoistScope.node, {pre: function(node) {
-                if (node.$references &&
+                if (node.$refToScope &&
+                    node.$refToScope !== origScope &&
                     node.name === name &&
-                    node.$references !== origScope &&
-                    hoistScope.isInnerScopeOf(node.$references)) {
+                    hoistScope.isInnerScopeOf(node.$refToScope)) {
 //                        console.log("rename due to shadowing: " + name);
                     rename = true;
                 }
@@ -209,10 +209,10 @@ function convertConstLets(node) {
             // updated all existing references to the variable
             // TODO is node.$parent sufficient (considering for loop init not parent of body)?
             traverse(node.$parent, {pre: function(node) {
-                if (node.$references === origScope && node.name === name) {
+                if (node.$refToScope === origScope && node.name === name) {
 //                    console.log(fmt("updated ref for {0} to {1}", node.name, newName));
 
-                    node.$references = hoistScope;
+                    node.$refToScope = hoistScope;
 
                     // textchange reference x => x$1
                     if (node.name !== newName) {
@@ -250,8 +250,8 @@ function detectLoopClosuresPre(node) {
         return;
     }
 
-    if (node.$references && isConstLet(node.$references.names.get(node.name))) {
-        let n = node.$references.node;
+    if (node.$refToScope && isConstLet(node.$refToScope.names.get(node.name))) {
+        let n = node.$refToScope.node;
 
         // node is an identifier
         // scope refers to the scope where the variable is defined
