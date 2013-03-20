@@ -8,6 +8,7 @@ const fmt = require("./lib/fmt");
 const traverse = require("./traverse");
 const Scope = require("./scope");
 const alter = require("./alter");
+const error = require("./error");
 
 if (process.argv.length <= 2) {
     console.log("USAGE: node --harmony blockscope.js file.js");
@@ -25,6 +26,10 @@ const ast = esprima(src, {
     loc: true,
     range: true,
 });
+
+function getline(node) {
+    return node.loc.start.line;
+}
 
 function constLet(t) {
     return is.someof(t, ["const", "let"]);
@@ -245,31 +250,34 @@ function detectLoopClosuresPre(node) {
         return;
     }
 
-    let scope = node.$references; // non-null if referencing identifier
-    if (scope && constLet(scope.names.get(node.name))) {
-        console.log(node.name);
+    if (node.$references && constLet(node.$references.names.get(node.name))) {
+        let n = node.$references.node;
+
         // node is an identifier
         // scope refers to the scope where the variable is defined
         // loop ..-> function ..-> node
 
         let ok = true;
-        while (scope) {
-//            scope.print();
-            if (scope.node === functions[functions.length - 1]) {
+        while (n) {
+//            n.print();
+//            console.log("--");
+            if (n === functions[functions.length - 1]) {
                 // we're ok (function-local)
                 break;
             }
-            if (scope.node === outermostLoop) {
+            if (n === outermostLoop) {
                 // not ok (between loop and function)
                 ok = false;
                 break;
             }
-            scope = scope.parent;
+//            console.log("# " + scope.node.type);
+            n = n.$parent;
+//            console.log("# " + scope.node);
         }
         if (ok) {
-            console.log("ok loop + closure: " + node.name);
+//            console.log("ok loop + closure: " + node.name);
         } else {
-            console.log("not ok loop + closure: " + node.name);
+            error(getline(node), "can't transform closure. {0} is defined outside closure, inside loop", node.name);
         }
 
 
@@ -296,13 +304,16 @@ function detectLoopClosuresPost(node) {
 
 traverse(ast, {pre: createScopes});
 traverse(ast, {pre: setupReferences});
-ast.$scope.print(); process.exit(-1);
+//ast.$scope.print(); process.exit(-1);
 traverse(ast, {pre: detectLoopClosuresPre, post: detectLoopClosuresPost});
+if (error.any) {
+    process.exit(-1);
+}
 traverse(ast, {pre: convertConstLets});
 
 
 const transformedSrc = alter(src, changes)
-//process.stdout.write(transformedSrc);
+process.stdout.write(transformedSrc);
 
 //console.dir(ast);
 

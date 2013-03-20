@@ -1,7 +1,9 @@
 "use strict";
 var arr = [];
 
-// x is bound once for entire loop so this could actually be transformed
+// fresh x per iteration so can't be transformed
+// note v8 bug https://code.google.com/p/v8/issues/detail?id=2560
+// also see other/v8-bug.js
 for (let x = 0; x < 10; x++) {
     arr.push(function() { return x; });
 }
@@ -12,14 +14,13 @@ for (var x = 0; x < 10; x++) {
     arr.push(function() { return y; });
 }
 
-/*
-// can be transformed (common WAT)
-for (var x = 0; x < 10; x++) {
+// fresh x per iteration so can't be transformed
+for (let x in [0,1,2]) {
     arr.push(function() { return x; });
 }
 
-// fresh x per iteration so can't be transformed
-for (let x in [0,1,2]) {
+// can be transformed (common WAT)
+for (var x = 0; x < 10; x++) {
     arr.push(function() { return x; });
 }
 
@@ -31,4 +32,3 @@ for (let x in [0,1,2]) {
 arr.forEach(function(f) {
     console.log(f());
 });
-*/
