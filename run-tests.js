@@ -3,7 +3,7 @@ const fmt = require("./lib/fmt");
 const exec = require("child_process").exec;
 
 function slurp(filename) {
-    return fs.existsSync(filename) ? String(fs.readFileSync(filename)) : null;
+    return fs.existsSync(filename) ? String(fs.readFileSync(filename)) : "";
 }
 
 const tests = fs.readdirSync("tests").filter(function(filename) {
@@ -11,25 +11,27 @@ const tests = fs.readdirSync("tests").filter(function(filename) {
 });
 
 function run(test) {
-    const noSuffix = test.slice(0,-3);
-    exec(fmt("node --harmony blockscope tests/{0}", test), function (error, stdout, stderr) {
-        if (stderr) {
-            if (stderr !== slurp(fmt("tests/{0}-stderr", noSuffix))) {
-                console.log(fmt("FAIL stderr {0}", test));
-                process.stdout.write(stderr);
+    const noSuffix = test.slice(0, -3);
+    exec(fmt("node --harmony blockscope tests/{0}", test), function(error, stdout, stderr) {
+        stderr = stderr || "";
+        stdout = stdout || "";
+        const expectedStderr = slurp(fmt("tests/{0}-stderr", noSuffix));
+        const expectedStdout = slurp(fmt("tests/{0}-out.js", noSuffix));
 
-                console.log("\nEXPECTED:");
-                process.stdout.write(slurp(fmt("tests/{0}-stderr", noSuffix)));
-            }
+        if (stderr !== expectedStderr) {
+            fail("stderr", stderr, expectedStderr);
         }
-        if (stdout) {
-            if (stdout !== slurp(fmt("tests/{0}-out.js", noSuffix))) {
-                console.log(fmt("FAIL got stdout {0}", test));
-                process.stdout.write(stdout);
+        if (stdout !== expectedStdout) {
+            fail("stdout", stdout, expectedStdout);
+        }
 
-                console.log("\nEXPECTED:");
-                process.stdout.write(slurp(fmt("tests/{0}-out.js", noSuffix)));
-            }
+        function fail(type, got, expected) {
+            console.log(fmt("FAILED test {0}", test));
+            console.log(fmt("\nEXPECTED {0}:", type));
+            process.stdout.write(expected);
+            console.log(fmt("\nGOT {0}:", type));
+            process.stdout.write(got);
+            console.log("---------------------------\n");
         }
     });
 }

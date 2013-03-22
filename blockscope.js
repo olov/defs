@@ -9,6 +9,7 @@ const traverse = require("./traverse");
 const Scope = require("./scope");
 const alter = require("./alter");
 const error = require("./error");
+const config = require("./config");
 
 if (process.argv.length <= 2) {
     console.log("USAGE: node --harmony blockscope.js file.js");
@@ -95,7 +96,11 @@ function createScopes(node) {
         // There's no block-scope under it
         // Function name goes in parent scope
         if (node.id) {
-            assert(node.type === "FunctionDeclaration"); // no support for named function expressions yet
+//            if (node.type === "FunctionExpression") {
+//                console.dir(node.id);
+//            }
+//            assert(node.type === "FunctionDeclaration"); // no support for named function expressions yet
+
             assert(node.id.type === "Identifier");
             node.$parent.$scope.add(node.id.name, "fun", node.id);
         }
@@ -140,11 +145,60 @@ function createScopes(node) {
     }
 }
 
+function createTopScope(programScope) {
+    function inject(obj) {
+        for (var name in obj) {
+            const writeable = obj[name];
+            const existingKind = topScope.get(name);
+            const kind = (writeable ? "var" : "const");
+            if (existingKind) {
+                if (existingKind !== kind) {
+                    error("global variable {0} writeable and read-only clash", name);
+                }
+            } else {
+                topScope.add(name, kind, {loc: {start: {line: -1}}});
+            }
+        }
+    }
+
+    const topScope = new Scope({
+        kind: "hoist",
+        node: {},
+        parent: null,
+    });
+
+    inject({undefined: false});
+
+    if (fs.existsSync("blockscope-config.json")) {
+        const vars = require("./jshint_globals/vars.js");
+        const config = {};
+        const configJson = JSON.parse(String(fs.readFileSync("blockscope-config.json")));
+        configJson.readonly.forEach(function(name) {
+            config[name] = false;
+        });
+        configJson.writeable.forEach(function(name) {
+            config[name] = true;
+        });
+        inject(config);
+
+        const standards = configJson.standards;
+        standards.forEach(function(standard) {
+            assert(vars[standard]);
+            inject(vars[standard]);
+        })
+    }
+
+    programScope.parent = topScope;
+}
+
 function setupReferences(node) {
     if (!isReference(node)) {
         return;
     }
     const scope = node.$scope.lookup(node.name);
+    if (!scope && config.disallowUnknownReferences) { // TODO smarter globals support
+        error(getline(node), "reference to unknown global variable {0}", node.name);
+    }
     node.$refToScope = scope;
 }
 
@@ -163,7 +217,7 @@ add name to hoisted scope
 remove name from
  */
 
-// TODO for loops init and body props are parallell to each other but init scope is outer that of body
+// TODO for loops init and body props are parallel to each other but init scope is outer that of body
 // TODO is this a problem?
 const changes = [];
 function convertConstLets(node) {
@@ -316,8 +370,18 @@ function detectConstAssignment(node) {
     }
 }
 
+// TODO detectUseBeforeDefinition
+
+// TODO detect unused variables (never read)
+
+// TODO detectConstantLets
+// find let variables that are never manipulated (so could be lets)
+
+// TODO convertToConstLet (stretch)
+// convert var codebase to use const and let
 
 traverse(ast, {pre: createScopes});
+createTopScope(ast.$scope);
 traverse(ast, {pre: setupReferences});
 //ast.$scope.print(); process.exit(-1);
 traverse(ast, {pre: detectLoopClosuresPre, post: detectLoopClosuresPost});

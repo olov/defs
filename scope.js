@@ -4,6 +4,7 @@ const assert = require("assert");
 const stringmap = require("./lib/stringmap");
 const is = require("./lib/is");
 const error = require("./error");
+const config = require("./config");
 
 function spaces(n) {
     return new Array(n + 1).join(" ");
@@ -41,31 +42,43 @@ Scope.prototype.add = function(name, kind, node) {
     // TODO catch-param
     assert(is.someof(kind, ["fun", "param", "var", "const", "let"]));
 
-    const isntConstLet = is.noneof(kind, ["const", "let"]);
+    function isConstLet(kind) {
+        return is.someof(kind, ["const", "let"]);
+    }
+
     let scope = this;
 
-    if (isntConstLet) {
-        while (scope.kind !== "hoist") {
+    // const|let variables go directly in the scope (could be block or hoist)
+    // others go in the nearest hoist-scope
+    //
+    if (!isConstLet(kind)) {
+        while (scope.kind === "block") {
             if (scope.names.has(name)) {
+                assert(is.someof(scope.names.get(name), ["const", "let"]));
                 return error(node.loc.start.line, "{0} is already declared", name);
             }
             scope = scope.parent;
         }
     }
-    if (scope.names.has(name)) {
+    // name exists in scope and either new or existing kind is const|let => error
+    if (scope.names.has(name) && (config.disallowDuplicated || isConstLet(scope.names.get(name)) || isConstLet(kind))) {
         return error(node.loc.start.line, "{0} is already declared", name);
     }
     scope.names.set(name, kind);
-}
+};
+
+Scope.prototype.get = function(name) {
+    return this.names.get(name);
+};
 
 Scope.prototype.remove = function(name) {
     assert(this.names.has(name));
     this.names.delete(name);
-}
+};
 
 Scope.prototype.hasOwn = function(name) {
     return this.names.has(name);
-}
+};
 
 Scope.prototype.closestHoistScope = function() {
     let scope = this;
@@ -73,7 +86,7 @@ Scope.prototype.closestHoistScope = function() {
         scope = scope.parent;
     }
     return scope;
-}
+};
 
 Scope.prototype.isInnerScopeOf = function(outer) {
     // TODO handle metaglobal scope differently
