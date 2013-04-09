@@ -205,7 +205,9 @@ function setupReferences(node) {
         assert(is.finitenumber(allowedFromPos));
         assert(is.finitenumber(referencedAtPos));
         if (referencedAtPos < allowedFromPos) {
-            error(getline(node), "{0} is referenced before its declaration", node.name);
+            if (!node.$scope.hasFunctionScopeBetween(scope)) {
+                error(getline(node), "{0} is referenced before its declaration", node.name);
+            }
         }
     }
     node.$refToScope = scope;

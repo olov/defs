@@ -111,6 +111,23 @@ Scope.prototype.isInnerScopeOf = function(outer) {
     return false;
 };
 
+Scope.prototype.hasFunctionScopeBetween = function(outer) {
+    function isFunction(node) {
+        return is.someof(node.type, ["FunctionDeclaration", "FunctionExpression"]);
+    }
+
+    for (let scope = this; scope; scope = scope.parent) {
+        if (scope === outer) {
+            return false;
+        }
+        if (isFunction(scope.node)) {
+            return true;
+        }
+    }
+
+    throw new Error("wasn't inner scope of outer");
+};
+
 Scope.prototype.lookup = function(name) {
     for (let scope = this; scope; scope = scope.parent) {
         if (scope.names.has(name)) {
