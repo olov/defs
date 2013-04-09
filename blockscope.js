@@ -381,12 +381,10 @@ function detectConstAssignment(node) {
     }
 }
 
-// TODO detectUseBeforeDefinition
-
 // TODO detect unused variables (never read)
 
 // TODO detectConstantLets
-// find let variables that are never manipulated (so could be lets)
+// find let variables that are never manipulated (so could be consts)
 
 // TODO convertToConstLet (stretch)
 // convert var codebase to use const and let
