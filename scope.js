@@ -2,6 +2,7 @@
 
 const assert = require("assert");
 const stringmap = require("./lib/stringmap");
+const stringset = require("./lib/stringset");
 const is = require("./lib/is");
 const error = require("./error");
 const config = require("./config");
@@ -21,6 +22,7 @@ function Scope(args) {
     this.children = [];
     this.names = stringmap();
     this.poses = stringmap();
+    this.written = stringset();
 
     if (this.parent) {
         this.parent.children.push(this);
@@ -136,5 +138,31 @@ Scope.prototype.lookup = function(name) {
     }
     return null;
 };
+
+Scope.prototype.markWrite = function(name) {
+    assert(is.string(name));
+    this.written.add(name);
+};
+
+// detects let variables that are never modified (ignores top-level)
+Scope.prototype.detectUnmodifiedLets = function() {
+    const outmost = this;
+
+    function detect(scope) {
+        if (scope !== outmost) {
+            scope.names.keys().forEach(function(name) {
+                if (scope.getKind(name) === "let" && !scope.written.has(name)) {
+                    return error(-1, "{0} is declared as let but never modified so could be const", name);
+                }
+            });
+        }
+
+        scope.children.forEach(function(childScope) {
+            detect(childScope);;
+        });
+    }
+    detect(this);
+};
+
 
 module.exports = Scope;

@@ -322,7 +322,7 @@ function detectLoopClosuresPre(node) {
         return;
     }
 
-    if (isReference(node) && isConstLet(node.$refToScope.names.get(node.name))) {
+    if (isReference(node) && isConstLet(node.$refToScope.getKind(node.name))) {
         let n = node.$refToScope.node;
 
         // node is an identifier
@@ -375,16 +375,27 @@ function detectLoopClosuresPost(node) {
 function detectConstAssignment(node) {
     if (isLvalue(node)) {
         const scope = node.$scope.lookup(node.name);
-        if (scope && scope.names.get(node.name) === "const") {
+        if (scope && scope.getKind(node.name) === "const") {
             error(getline(node), "can't assign to const variable {0}", node.name);
         }
     }
 }
 
-// TODO detect unused variables (never read)
+function detectConstantLets(ast) {
+    traverse(ast, {pre: function(node) {
+        if (isLvalue(node)) {
+            const scope = node.$scope.lookup(node.name);
+            if (scope) {
+                scope.markWrite(node.name);
+            }
+        }
+    }});
 
-// TODO detectConstantLets
-// find let variables that are never manipulated (so could be consts)
+    ast.$scope.detectUnmodifiedLets();
+}
+
+
+// TODO detect unused variables (never read)
 
 // TODO convertToConstLet (stretch)
 // convert var codebase to use const and let
@@ -395,6 +406,7 @@ traverse(ast, {pre: setupReferences});
 //ast.$scope.print(); process.exit(-1);
 traverse(ast, {pre: detectLoopClosuresPre, post: detectLoopClosuresPost});
 traverse(ast, {pre: detectConstAssignment});
+//detectConstantLets(ast);
 if (error.any) {
     process.exit(-1);
 }
