@@ -102,7 +102,7 @@ function createScopes(node) {
 //            assert(node.type === "FunctionDeclaration"); // no support for named function expressions yet
 
             assert(node.id.type === "Identifier");
-            node.$parent.$scope.add(node.id.name, "fun", node.id);
+            node.$parent.$scope.add(node.id.name, "fun", node.id, node.body.range[0]);
         }
 
         node.$scope = new Scope({
@@ -112,7 +112,7 @@ function createScopes(node) {
         });
 
         node.params.forEach(function(param) {
-            node.$scope.add(param.name, "param", param);
+            node.$scope.add(param.name, "param", param, -1);
         });
 
     } else if (node.type === "VariableDeclaration") {
@@ -120,7 +120,7 @@ function createScopes(node) {
         assert(isVarConstLet(node.kind));
         node.declarations.forEach(function(declarator) {
             assert(declarator.type === "VariableDeclarator");
-            node.$scope.add(declarator.id.name, node.kind, declarator.id);
+            node.$scope.add(declarator.id.name, node.kind, declarator.id, declarator.range[1]);
         });
 
     } else if (isForWithConstLet(node) || isForInWithConstLet(node)) {
@@ -149,14 +149,14 @@ function createTopScope(programScope) {
     function inject(obj) {
         for (var name in obj) {
             const writeable = obj[name];
-            const existingKind = topScope.get(name);
+            const existingKind = topScope.getKind(name);
             const kind = (writeable ? "var" : "const");
             if (existingKind) {
                 if (existingKind !== kind) {
                     error("global variable {0} writeable and read-only clash", name);
                 }
             } else {
-                topScope.add(name, kind, {loc: {start: {line: -1}}});
+                topScope.add(name, kind, {loc: {start: {line: -1}}}, -1);
             }
         }
     }
@@ -199,6 +199,15 @@ function setupReferences(node) {
     if (!scope && config.disallowUnknownReferences) { // TODO smarter globals support
         error(getline(node), "reference to unknown global variable {0}", node.name);
     }
+    if (scope) {
+        const allowedFromPos = scope.getPos(node.name);
+        const referencedAtPos = node.range[0];
+        assert(is.finitenumber(allowedFromPos));
+        assert(is.finitenumber(referencedAtPos));
+        if (referencedAtPos < allowedFromPos) {
+            error(getline(node), "{0} is referenced before its declaration", node.name);
+        }
+    }
     node.$refToScope = scope;
 }
 
@@ -232,10 +241,10 @@ function convertConstLets(node) {
             str: "var",
         });
 
-        node.declarations.forEach(function(declaration) {
-            assert(declaration.type === "VariableDeclarator");
+        node.declarations.forEach(function(declarator) {
+            assert(declarator.type === "VariableDeclarator");
 
-            const name = declaration.id.name;
+            const name = declarator.id.name;
 
             // rename to avoid shadowing existing references to other variable with the same name
             let rename = false;
@@ -256,13 +265,13 @@ function convertConstLets(node) {
 
             origScope.remove(name);
             const newName = (rename ? unique(name) : name);
-            hoistScope.add(newName, "var", declaration.id);
+            hoistScope.add(newName, "var", declarator.id, declarator.range[1]);
 
             // textchange var x => var x$1
             if (newName !== name) {
                 changes.push({
-                    start: declaration.id.range[0],
-                    end: declaration.id.range[1],
+                    start: declarator.id.range[0],
+                    end: declarator.id.range[1],
                     str: newName,
                 });
             }

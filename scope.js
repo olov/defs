@@ -20,6 +20,7 @@ function Scope(args) {
     this.parent = args.parent;
     this.children = [];
     this.names = stringmap();
+    this.poses = stringmap();
 
     if (this.parent) {
         this.parent.children.push(this);
@@ -38,7 +39,7 @@ Scope.prototype.print = function(indent) {
     });
 };
 
-Scope.prototype.add = function(name, kind, node) {
+Scope.prototype.add = function(name, kind, node, referableFromPos) {
     // TODO catch-param
     assert(is.someof(kind, ["fun", "param", "var", "const", "let"]));
 
@@ -65,15 +66,24 @@ Scope.prototype.add = function(name, kind, node) {
         return error(node.loc.start.line, "{0} is already declared", name);
     }
     scope.names.set(name, kind);
+    scope.poses.set(name, referableFromPos);
 };
 
-Scope.prototype.get = function(name) {
+Scope.prototype.getKind = function(name) {
+    assert(is.string(name));
     return this.names.get(name);
 };
 
+Scope.prototype.getPos = function(name) {
+    assert(is.string(name));
+    return this.poses.get(name);
+};
+
 Scope.prototype.remove = function(name) {
+    assert(is.string(name));
     assert(this.names.has(name));
     this.names.delete(name);
+    this.poses.delete(name);
 };
 
 Scope.prototype.hasOwn = function(name) {
