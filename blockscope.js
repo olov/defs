@@ -127,7 +127,11 @@ function createScopes(node) {
         assert(isVarConstLet(node.kind));
         node.declarations.forEach(function(declarator) {
             assert(declarator.type === "VariableDeclarator");
-            addToScope(node.$scope, declarator.id.name, node.kind, declarator.id, declarator.range[1]);
+            const name = declarator.id.name;
+            if (config.disallowVars && node.kind === "var") {
+                error(getline(declarator), "var {0} is not allowed (use let or const)", name);
+            }
+            addToScope(node.$scope, name, node.kind, declarator.id, declarator.range[1]);
         });
 
     } else if (isForWithConstLet(node) || isForInWithConstLet(node)) {
@@ -154,13 +158,13 @@ function createScopes(node) {
 
 function createTopScope(programScope) {
     function inject(obj) {
-        for (var name in obj) {
+        for (let name in obj) {
             const writeable = obj[name];
             const existingKind = topScope.getKind(name);
             const kind = (writeable ? "var" : "const");
             if (existingKind) {
                 if (existingKind !== kind) {
-                    error("global variable {0} writeable and read-only clash", name);
+                    error(-1, "global variable {0} writeable and read-only clash", name);
                 }
             } else {
                 addToScope(topScope, name, kind, {loc: {start: {line: -1}}}, -1);
@@ -408,6 +412,7 @@ function detectConstantLets(ast) {
 
 
 // TODO detect unused variables (never read)
+// TODO detect let variables that are never modified (could be const)
 
 // TODO convertToConstLet (stretch)
 // convert var codebase to use const and let

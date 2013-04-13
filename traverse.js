@@ -27,7 +27,7 @@ function traverse(root, options) {
                     continue;
                 }
 
-                var child = node[prop];
+                const child = node[prop];
 
                 if (Array.isArray(child)) {
                     for (let i = 0; i < child.length; i++) {
