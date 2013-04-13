@@ -5,6 +5,7 @@ const fs = require("fs");
 const assert = require("assert");
 const is = require("./lib/is");
 const fmt = require("./lib/fmt");
+const stringset = require("./lib/stringset");
 const traverse = require("./traverse");
 const Scope = require("./scope");
 const alter = require("./alter");
@@ -27,6 +28,7 @@ const ast = esprima(src, {
     loc: true,
     range: true,
 });
+const allIdenfitiers = stringset();
 
 function getline(node) {
     return node.loc.start.line;
@@ -79,6 +81,11 @@ function isLvalue(node) {
             (node.$parent.type === "UpdateExpression" && node.$parent.argument === node));
 }
 
+function addToScope(scope, name, kind, node, referableFromPos) {
+    allIdenfitiers.add(name);
+    scope.add(name, kind,node, referableFromPos);
+}
+
 function createScopes(node) {
     node.$scope = node.$parent ? node.$parent.$scope : null; // may be overridden
 
@@ -102,7 +109,7 @@ function createScopes(node) {
 //            assert(node.type === "FunctionDeclaration"); // no support for named function expressions yet
 
             assert(node.id.type === "Identifier");
-            node.$parent.$scope.add(node.id.name, "fun", node.id, node.body.range[0]);
+            addToScope(node.$parent.$scope, node.id.name, "fun", node.id, node.body.range[0]);
         }
 
         node.$scope = new Scope({
@@ -112,7 +119,7 @@ function createScopes(node) {
         });
 
         node.params.forEach(function(param) {
-            node.$scope.add(param.name, "param", param, -1);
+            addToScope(node.$scope, param.name, "param", param, -1);
         });
 
     } else if (node.type === "VariableDeclaration") {
@@ -120,7 +127,7 @@ function createScopes(node) {
         assert(isVarConstLet(node.kind));
         node.declarations.forEach(function(declarator) {
             assert(declarator.type === "VariableDeclarator");
-            node.$scope.add(declarator.id.name, node.kind, declarator.id, declarator.range[1]);
+            addToScope(node.$scope, declarator.id.name, node.kind, declarator.id, declarator.range[1]);
         });
 
     } else if (isForWithConstLet(node) || isForInWithConstLet(node)) {
@@ -156,7 +163,7 @@ function createTopScope(programScope) {
                     error("global variable {0} writeable and read-only clash", name);
                 }
             } else {
-                topScope.add(name, kind, {loc: {start: {line: -1}}}, -1);
+                addToScope(topScope, name, kind, {loc: {start: {line: -1}}}, -1);
             }
         }
     }
@@ -211,12 +218,17 @@ function setupReferences(node) {
         }
     }
     node.$refToScope = scope;
+    allIdenfitiers.add(node.name);
 }
 
-// TODO make robust
-let cnt = 0;
 function unique(name) {
-    return name + "$" + String(++cnt);
+    assert(allIdenfitiers.has(name));
+    for (let cnt = 0; ; cnt++) {
+        const genName = name + "$" + String(cnt);
+        if (!allIdenfitiers.has(genName)) {
+            return genName;
+        }
+    }
 }
 
 /*
@@ -267,7 +279,7 @@ function convertConstLets(node) {
 
             origScope.remove(name);
             const newName = (rename ? unique(name) : name);
-            hoistScope.add(newName, "var", declarator.id, declarator.range[1]);
+            addToScope(hoistScope, newName, "var", declarator.id, declarator.range[1]);
 
             // textchange var x => var x$1
             if (newName !== name) {

@@ -7,8 +7,8 @@ for (var x = 0; x < 10; x++) {
 }
 
 // can be transformed
-for (var x$1 in [0,1,2]) {
-    arr.push((function(x) { return function() { return x; } })(x$1));
+for (var x$0 in [0,1,2]) {
+    arr.push((function(x) { return function() { return x; } })(x$0));
 }
 
 arr.forEach(function(f) {
