@@ -20,8 +20,7 @@ function Scope(args) {
     this.node = args.node;
     this.parent = args.parent;
     this.children = [];
-    this.names = stringmap();
-    this.poses = stringmap();
+    this.decls = stringmap();
     this.written = stringset();
 
     if (this.parent) {
@@ -32,8 +31,8 @@ function Scope(args) {
 Scope.prototype.print = function(indent) {
     indent = indent || 0;
     const scope = this;
-    const names = this.names.keys().map(function(name) {
-        return name + " [" + scope.names.get(name) + "]";
+    const names = this.decls.keys().map(function(name) {
+        return name + " [" + scope.decls.get(name).kind + "]";
     }).join(", ");
     console.log(spaces(indent) + this.node.type + ": " + names);
     this.children.forEach(function(c) {
@@ -56,15 +55,15 @@ Scope.prototype.add = function(name, kind, node, referableFromPos) {
     //
     if (!isConstLet(kind)) {
         while (scope.kind === "block") {
-            if (scope.names.has(name)) {
-                assert(is.someof(scope.names.get(name), ["const", "let"]));
+            if (scope.decls.has(name)) {
+                assert(is.someof(scope.decls.get(name).kind, ["const", "let"]));
                 return error(node.loc.start.line, "{0} is already declared", name);
             }
             scope = scope.parent;
         }
     }
     // name exists in scope and either new or existing kind is const|let => error
-    if (scope.names.has(name) && (config.disallowDuplicated || isConstLet(scope.names.get(name)) || isConstLet(kind))) {
+    if (scope.decls.has(name) && (config.disallowDuplicated || isConstLet(scope.decls.get(name).kind) || isConstLet(kind))) {
         return error(node.loc.start.line, "{0} is already declared", name);
     }
 
@@ -72,29 +71,39 @@ Scope.prototype.add = function(name, kind, node, referableFromPos) {
         referableFromPos = scope.node.range[0];
     }
 
-    scope.names.set(name, kind);
-    scope.poses.set(name, referableFromPos);
+    scope.decls.set(name, {
+        kind: kind,
+        node: node,
+        from: referableFromPos,
+    });
 };
 
 Scope.prototype.getKind = function(name) {
     assert(is.string(name));
-    return this.names.get(name);
+    const decl = this.decls.get(name);
+    return decl ? decl.kind : null;
 };
 
-Scope.prototype.getPos = function(name) {
+Scope.prototype.getNode = function(name) {
     assert(is.string(name));
-    return this.poses.get(name);
+    const decl = this.decls.get(name);
+    return decl ? decl.node : null;
+};
+
+Scope.prototype.getFromPos = function(name) {
+    assert(is.string(name));
+    const decl = this.decls.get(name);
+    return decl ? decl.from : null;
 };
 
 Scope.prototype.remove = function(name) {
     assert(is.string(name));
-    assert(this.names.has(name));
-    this.names.delete(name);
-    this.poses.delete(name);
+    assert(this.decls.has(name));
+    this.decls.delete(name);
 };
 
 Scope.prototype.hasOwn = function(name) {
-    return this.names.has(name);
+    return this.decls.has(name);
 };
 
 Scope.prototype.closestHoistScope = function() {
@@ -137,7 +146,7 @@ Scope.prototype.hasFunctionScopeBetween = function(outer) {
 
 Scope.prototype.lookup = function(name) {
     for (let scope = this; scope; scope = scope.parent) {
-        if (scope.names.has(name)) {
+        if (scope.decls.has(name)) {
             return scope;
         }
     }
@@ -155,9 +164,9 @@ Scope.prototype.detectUnmodifiedLets = function() {
 
     function detect(scope) {
         if (scope !== outmost) {
-            scope.names.keys().forEach(function(name) {
+            scope.decls.keys().forEach(function(name) {
                 if (scope.getKind(name) === "let" && !scope.written.has(name)) {
-                    return error(-1, "{0} is declared as let but never modified so could be const", name);
+                    return error(scope.getNode(name).loc.start.line, "{0} is declared as let but never modified so could be const", name);
                 }
             });
         }

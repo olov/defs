@@ -211,7 +211,7 @@ function setupReferences(node) {
         error(getline(node), "reference to unknown global variable {0}", node.name);
     }
     if (scope) {
-        const allowedFromPos = scope.getPos(node.name);
+        const allowedFromPos = scope.getFromPos(node.name);
         const referencedAtPos = node.range[0];
         assert(is.finitenumber(allowedFromPos));
         assert(is.finitenumber(referencedAtPos));
