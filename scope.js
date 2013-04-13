@@ -67,6 +67,11 @@ Scope.prototype.add = function(name, kind, node, referableFromPos) {
     if (scope.names.has(name) && (config.disallowDuplicated || isConstLet(scope.names.get(name)) || isConstLet(kind))) {
         return error(node.loc.start.line, "{0} is already declared", name);
     }
+
+    if (kind === "fun" && referableFromPos === null) {
+        referableFromPos = scope.node.range[0];
+    }
+
     scope.names.set(name, kind);
     scope.poses.set(name, referableFromPos);
 };

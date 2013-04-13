@@ -109,7 +109,7 @@ function createScopes(node) {
 //            assert(node.type === "FunctionDeclaration"); // no support for named function expressions yet
 
             assert(node.id.type === "Identifier");
-            addToScope(node.$parent.$scope, node.id.name, "fun", node.id, node.body.range[0]);
+            addToScope(node.$parent.$scope, node.id.name, "fun", node.id, null); //, node.body.range[0]);
         }
 
         node.$scope = new Scope({
