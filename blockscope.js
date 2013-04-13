@@ -412,7 +412,6 @@ function detectConstantLets(ast) {
 
 
 // TODO detect unused variables (never read)
-// TODO detect let variables that are never modified (could be const)
 
 // TODO convertToConstLet (stretch)
 // convert var codebase to use const and let
