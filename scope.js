@@ -3,7 +3,7 @@
 const assert = require("assert");
 const stringmap = require("stringmap");
 const stringset = require("stringset");
-const is = require("./lib/is");
+const is = require("simple-is");
 const error = require("./error");
 const config = require("./config");
 

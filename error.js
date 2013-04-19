@@ -1,6 +1,6 @@
 "use strict";
 
-const fmt = require("./lib/fmt");
+const fmt = require("simple-fmt");
 const assert = require("assert");
 
 function error(line, var_args) {

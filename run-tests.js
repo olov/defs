@@ -1,5 +1,5 @@
 const fs = require("fs");
-const fmt = require("./lib/fmt");
+const fmt = require("simple-fmt");
 const exec = require("child_process").exec;
 
 function slurp(filename) {

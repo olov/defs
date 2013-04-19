@@ -1,6 +1,6 @@
 "use strict";
 
-const is = require("./lib/is");
+const is = require("simple-is");
 
 function traverse(root, options) {
     options = options || {};
