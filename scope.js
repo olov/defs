@@ -1,8 +1,8 @@
 "use strict";
 
 const assert = require("assert");
-const stringmap = require("./lib/stringmap");
-const stringset = require("./lib/stringset");
+const stringmap = require("stringmap");
+const stringset = require("stringset");
 const is = require("./lib/is");
 const error = require("./error");
 const config = require("./config");
