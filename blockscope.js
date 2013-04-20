@@ -163,6 +163,17 @@ function createScopes(node) {
             parent: node.$parent.$scope,
         });
         addToScope(node.$scope, identifier.name, "caught", identifier, identifier.range[1]);
+
+        // All hoist-scope keeps track of which variables that are propagated through,
+        // i.e. an reference inside the scope points to a declaration outside the scope.
+        // This is used to mark "taint" the name since adding a new variable in the scope,
+        // with a propagated name, would change the meaning of the existing references.
+        //
+        // catch(e) is special because even though e is a variable in its own scope,
+        // we want to make sure that catch(e){let e} is never transformed to
+        // catch(e){var e} (but rather var e$0). For that reason we taint the use of e
+        // in the closest hoist-scope, i.e. where var e$0 belongs.
+        node.$scope.closestHoistScope().markPropagates(identifier.name);
     }
 }
 
@@ -217,7 +228,7 @@ function setupReferences(node) {
         return;
     }
     const scope = node.$scope.lookup(node.name);
-    if (!scope && config.disallowUnknownReferences) { // TODO smarter globals support
+    if (!scope && config.disallowUnknownReferences) {
         error(getline(node), "reference to unknown global variable {0}", node.name);
     }
     if (scope) {
@@ -256,6 +267,13 @@ remove name from
 
 // TODO for loops init and body props are parallel to each other but init scope is outer that of body
 // TODO is this a problem?
+
+function varify(ast) {
+    traverse(ast, {pre: convertConstLets});
+    traverse(ast, {pre: renameConstLets});
+    return alter(src, changes);
+}
+
 const changes = [];
 function convertConstLets(node) {
     if (node.type === "VariableDeclaration" && isConstLet(node.kind)) {
@@ -271,28 +289,16 @@ function convertConstLets(node) {
 
         node.declarations.forEach(function(declarator) {
             assert(declarator.type === "VariableDeclarator");
-
             const name = declarator.id.name;
 
-            // rename to avoid shadowing existing references to other variable with the same name
-            let rename = false;
-            traverse(hoistScope.node, {pre: function(node) {
-                if (isReference(node) &&
-                    node.$refToScope !== origScope &&
-                    node.name === name &&
-                    hoistScope.isInnerScopeOf(node.$refToScope)) {
-//                        console.log("rename due to shadowing: " + name);
-                    rename = true;
-                }
-            }});
+            // rename if
+            // 1) name already exists in hoistScope, or
+            // 2) name is already propagated (passed) through hoistScope or manually tainted
+            const rename = (origScope !== hoistScope &&
+                (hoistScope.hasOwn(name) || hoistScope.doesPropagate(name)));
 
-            // rename due to the name being occupied in the hoisted scope (i.e. const|let used to shadow)
-            if (origScope !== hoistScope && hoistScope.hasOwn(name)) {
-                rename = true;
-            }
-
-            origScope.remove(name);
             const newName = (rename ? unique(name) : name);
+            origScope.move(name, newName, hoistScope);
             addToScope(hoistScope, newName, "var", declarator.id, declarator.range[1]);
 
             // textchange var x => var x$1
@@ -303,30 +309,30 @@ function convertConstLets(node) {
                     str: newName,
                 });
             }
-
-            // updated all existing references to the variable
-            // TODO is node.$parent sufficient (considering for loop init not parent of body)?
-            traverse(node.$parent, {pre: function(node) {
-                if (node.$refToScope === origScope && node.name === name) {
-//                    console.log(fmt("updated ref for {0} to {1}", node.name, newName));
-
-                    node.$refToScope = hoistScope;
-
-                    // textchange reference x => x$1
-                    if (node.name !== newName) {
-                        node.name = newName;
-                        changes.push({
-                            start: node.range[0],
-                            end: node.range[1],
-                            str: newName,
-                        });
-                    }
-                }
-            }});
         });
-//        console.log(srcFor(node));
     }
 }
+
+function renameConstLets(node) {
+    if (!node.$refToScope) {
+        return;
+    }
+    const move = node.$refToScope.getMove(node.name);
+    if (!move) {
+        return;
+    }
+    node.$refToScope = move.scope;
+
+    if (node.name !== move.name) {
+        node.name = move.name;
+        changes.push({
+            start: node.range[0],
+            end: node.range[1],
+            str: move.name,
+        });
+    }
+}
+
 
 let outermostLoop = null;
 let functions = [];
@@ -423,9 +429,6 @@ function detectConstantLets(ast) {
 
 // TODO detect unused variables (never read)
 
-// TODO convertToConstLet (stretch)
-// convert var codebase to use const and let
-
 traverse(ast, {pre: createScopes});
 createTopScope(ast.$scope);
 traverse(ast, {pre: setupReferences});
@@ -436,10 +439,8 @@ traverse(ast, {pre: detectConstAssignment});
 if (error.any) {
     process.exit(-1);
 }
-traverse(ast, {pre: convertConstLets});
 
-
-const transformedSrc = alter(src, changes)
+const transformedSrc = varify(ast);
 process.stdout.write(transformedSrc);
 
 //console.dir(ast);
