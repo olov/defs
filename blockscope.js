@@ -256,81 +256,74 @@ function unique(name) {
     }
 }
 
-/*
-Change all let and const declarations to var
-optionally rename:
-  if name is already present in hoisted scope
-  if name is a reference that would otherwise get shadowed
-add name to hoisted scope
-remove name from
- */
-
 // TODO for loops init and body props are parallel to each other but init scope is outer that of body
 // TODO is this a problem?
 
 function varify(ast) {
-    traverse(ast, {pre: convertConstLets});
-    traverse(ast, {pre: renameConstLets});
+    const changes = [];
+
+    function renameDeclaration(node) {
+        if (node.type === "VariableDeclaration" && isConstLet(node.kind)) {
+            const hoistScope = node.$scope.closestHoistScope();
+            const origScope = node.$scope;
+
+            // text change const|let => var
+            changes.push({
+                start: node.range[0],
+                end: node.range[0] + node.kind.length,
+                str: "var",
+            });
+
+            node.declarations.forEach(function(declarator) {
+                assert(declarator.type === "VariableDeclarator");
+                const name = declarator.id.name;
+
+                // rename if
+                // 1) name already exists in hoistScope, or
+                // 2) name is already propagated (passed) through hoistScope or manually tainted
+                const rename = (origScope !== hoistScope &&
+                    (hoistScope.hasOwn(name) || hoistScope.doesPropagate(name)));
+
+                const newName = (rename ? unique(name) : name);
+                origScope.move(name, newName, hoistScope);
+                addToScope(hoistScope, newName, "var", declarator.id, declarator.range[1]);
+
+                // textchange var x => var x$1
+                if (newName !== name) {
+                    changes.push({
+                        start: declarator.id.range[0],
+                        end: declarator.id.range[1],
+                        str: newName,
+                    });
+                }
+            });
+        }
+    }
+
+    function renameReference(node) {
+        if (!node.$refToScope) {
+            return;
+        }
+        const move = node.$refToScope.getMove(node.name);
+        if (!move) {
+            return;
+        }
+        node.$refToScope = move.scope;
+
+        if (node.name !== move.name) {
+            node.name = move.name;
+            changes.push({
+                start: node.range[0],
+                end: node.range[1],
+                str: move.name,
+            });
+        }
+    }
+
+    traverse(ast, {pre: renameDeclaration});
+    traverse(ast, {pre: renameReference});
+
     return alter(src, changes);
-}
-
-const changes = [];
-function convertConstLets(node) {
-    if (node.type === "VariableDeclaration" && isConstLet(node.kind)) {
-        const hoistScope = node.$scope.closestHoistScope();
-        const origScope = node.$scope;
-
-        // text change const|let => var
-        changes.push({
-            start: node.range[0],
-            end: node.range[0] + node.kind.length,
-            str: "var",
-        });
-
-        node.declarations.forEach(function(declarator) {
-            assert(declarator.type === "VariableDeclarator");
-            const name = declarator.id.name;
-
-            // rename if
-            // 1) name already exists in hoistScope, or
-            // 2) name is already propagated (passed) through hoistScope or manually tainted
-            const rename = (origScope !== hoistScope &&
-                (hoistScope.hasOwn(name) || hoistScope.doesPropagate(name)));
-
-            const newName = (rename ? unique(name) : name);
-            origScope.move(name, newName, hoistScope);
-            addToScope(hoistScope, newName, "var", declarator.id, declarator.range[1]);
-
-            // textchange var x => var x$1
-            if (newName !== name) {
-                changes.push({
-                    start: declarator.id.range[0],
-                    end: declarator.id.range[1],
-                    str: newName,
-                });
-            }
-        });
-    }
-}
-
-function renameConstLets(node) {
-    if (!node.$refToScope) {
-        return;
-    }
-    const move = node.$refToScope.getMove(node.name);
-    if (!move) {
-        return;
-    }
-    node.$refToScope = move.scope;
-
-    if (node.name !== move.name) {
-        node.name = move.name;
-        changes.push({
-            start: node.range[0],
-            end: node.range[1],
-            str: move.name,
-        });
-    }
 }
 
 
