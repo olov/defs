@@ -87,6 +87,9 @@ function addToScope(scope, name, kind, node, referableFromPos) {
 }
 
 function createScopes(node) {
+    if (node.$scope) {
+        return; // exit if already visited
+    }
     node.$scope = node.$parent ? node.$parent.$scope : null; // may be overridden
 
     if (node.type === "Program") {
@@ -151,8 +154,15 @@ function createScopes(node) {
             parent: node.$parent.$scope,
         });
 
-    } else {
-        // TODO catch(e)
+    } else if (node.type === "CatchClause") {
+        const identifier = node.param;
+
+        node.$scope = new Scope({
+            kind: "catch-block",
+            node: node,
+            parent: node.$parent.$scope,
+        });
+        addToScope(node.$scope, identifier.name, "caught", identifier, identifier.range[1]);
     }
 }
 

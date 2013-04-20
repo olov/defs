@@ -9,7 +9,7 @@ const error = require("./error");
 const config = require("./config");
 
 function Scope(args) {
-    assert(is.someof(args.kind, ["hoist", "block"]));
+    assert(is.someof(args.kind, ["hoist", "block", "catch-block"]));
     assert(is.object(args.node));
     assert(args.parent === null || is.object(args.parent));
 
@@ -38,8 +38,7 @@ Scope.prototype.print = function(indent) {
 };
 
 Scope.prototype.add = function(name, kind, node, referableFromPos) {
-    // TODO catch-param
-    assert(is.someof(kind, ["fun", "param", "var", "const", "let"]));
+    assert(is.someof(kind, ["fun", "param", "var", "caught", "const", "let"]));
 
     function isConstLet(kind) {
         return is.someof(kind, ["const", "let"]);
@@ -47,13 +46,11 @@ Scope.prototype.add = function(name, kind, node, referableFromPos) {
 
     let scope = this;
 
-    // const|let variables go directly in the scope (could be block or hoist)
-    // others go in the nearest hoist-scope
-    //
-    if (!isConstLet(kind)) {
-        while (scope.kind === "block") {
-            if (scope.decls.has(name)) {
-                assert(is.someof(scope.decls.get(name).kind, ["const", "let"]));
+    // search nearest hoist-scope for fun, param and var's
+    // const, let and caught variables go directly in the scope (which may be hoist, block or catch-block)
+    if (is.someof(kind, ["fun", "param", "var"])) {
+        while (scope.kind !== "hoist") {
+            if (scope.decls.has(name) && isConstLet(scope.decls.get(name).kind)) { // could be caught
                 return error(node.loc.start.line, "{0} is already declared", name);
             }
             scope = scope.parent;
