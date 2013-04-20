@@ -4,12 +4,9 @@ const assert = require("assert");
 const stringmap = require("stringmap");
 const stringset = require("stringset");
 const is = require("simple-is");
+const fmt = require("simple-fmt");
 const error = require("./error");
 const config = require("./config");
-
-function spaces(n) {
-    return new Array(n + 1).join(" ");
-}
 
 function Scope(args) {
     assert(is.someof(args.kind, ["hoist", "block"]));
@@ -32,9 +29,9 @@ Scope.prototype.print = function(indent) {
     indent = indent || 0;
     const scope = this;
     const names = this.decls.keys().map(function(name) {
-        return name + " [" + scope.decls.get(name).kind + "]";
+        return fmt("{0} [{1}]", name, scope.decls.get(name).kind);
     }).join(", ");
-    console.log(spaces(indent) + this.node.type + ": " + names);
+    console.log(fmt("{0}{1}: {2}", fmt.repeat(" ", indent), this.node.type, names));
     this.children.forEach(function(c) {
         c.print(indent + 2);
     });
