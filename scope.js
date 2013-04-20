@@ -18,7 +18,9 @@ function Scope(args) {
     this.parent = args.parent;
     this.children = [];
     this.decls = stringmap();
+    this.moves = stringmap();
     this.written = stringset();
+    this.propagates = (this.kind === "hoist" ? stringset() : null);
 
     if (this.parent) {
         this.parent.children.push(this);
@@ -31,7 +33,8 @@ Scope.prototype.print = function(indent) {
     const names = this.decls.keys().map(function(name) {
         return fmt("{0} [{1}]", name, scope.decls.get(name).kind);
     }).join(", ");
-    console.log(fmt("{0}{1}: {2}", fmt.repeat(" ", indent), this.node.type, names));
+    const propagates = this.propagates ? this.propagates.items().join(", ") : "";
+    console.log(fmt("{0}{1}: {2}. propagates: {3}", fmt.repeat(" ", indent), this.node.type, names, propagates));
     this.children.forEach(function(c) {
         c.print(indent + 2);
     });
@@ -90,14 +93,31 @@ Scope.prototype.getFromPos = function(name) {
     return decl ? decl.from : null;
 };
 
-Scope.prototype.remove = function(name) {
+Scope.prototype.move = function(name, newName, newScope) {
     assert(is.string(name));
+    assert(is.string(newName));
     assert(this.decls.has(name));
     this.decls.delete(name);
+    this.moves.set(name, {
+        name: newName,
+        scope: newScope,
+    });
+};
+
+Scope.prototype.getMove = function(name) {
+    return this.moves.get(name);
 };
 
 Scope.prototype.hasOwn = function(name) {
     return this.decls.has(name);
+};
+
+Scope.prototype.doesPropagate = function(name) {
+    return this.propagates.has(name);
+};
+
+Scope.prototype.markPropagates = function(name) {
+    this.propagates.add(name);
 };
 
 Scope.prototype.closestHoistScope = function() {
@@ -106,19 +126,6 @@ Scope.prototype.closestHoistScope = function() {
         scope = scope.parent;
     }
     return scope;
-};
-
-Scope.prototype.isInnerScopeOf = function(outer) {
-    // TODO handle metaglobal scope differently
-    if (outer === null) {
-        return true;
-    }
-    for (let scope = this.parent; scope; scope = scope.parent) {
-        if (scope === outer) {
-            return true;
-        }
-    }
-    return false;
 };
 
 Scope.prototype.hasFunctionScopeBetween = function(outer) {
@@ -142,6 +149,8 @@ Scope.prototype.lookup = function(name) {
     for (let scope = this; scope; scope = scope.parent) {
         if (scope.decls.has(name)) {
             return scope;
+        } else if (scope.kind === "hoist") {
+            scope.propagates.add(name);
         }
     }
     return null;
@@ -171,6 +180,5 @@ Scope.prototype.detectUnmodifiedLets = function() {
     }
     detect(this);
 };
-
 
 module.exports = Scope;
