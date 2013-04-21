@@ -10,7 +10,7 @@ const alter = require("alter");
 const traverse = require("./traverse");
 const Scope = require("./scope");
 const error = require("./error");
-const config = require("./config");
+const options = require("./options");
 const jshint_vars = require("./jshint_globals/vars.js");
 
 if (process.argv.length <= 2) {
@@ -26,6 +26,10 @@ if (!fs.existsSync(filename)) {
 
 const blockscope_config = (fs.existsSync("blockscope-config.json") ?
     JSON.parse(String(fs.readFileSync("blockscope-config.json"))) : {});
+
+for (let key in blockscope_config) {
+    options[key] = blockscope_config[key];
+}
 
 const src = String(fs.readFileSync(filename));
 const ast = esprima(src, {
@@ -135,7 +139,7 @@ function createScopes(node) {
         node.declarations.forEach(function(declarator) {
             assert(declarator.type === "VariableDeclarator");
             const name = declarator.id.name;
-            if (config.disallowVars && node.kind === "var") {
+            if (options.disallowVars && node.kind === "var") {
                 error(getline(declarator), "var {0} is not allowed (use let or const)", name);
             }
             addToScope(node.$scope, name, node.kind, declarator.id, declarator.range[1]);
@@ -232,7 +236,7 @@ function setupReferences(node) {
         return;
     }
     const scope = node.$scope.lookup(node.name);
-    if (!scope && config.disallowUnknownReferences) {
+    if (!scope && options.disallowUnknownReferences) {
         error(getline(node), "reference to unknown global variable {0}", node.name);
     }
     // check const and let for referenced-before-declaration
@@ -428,7 +432,7 @@ function detectConstantLets(ast) {
 // TODO detect unused variables (never read)
 
 traverse(ast, {pre: createScopes});
-createTopScope(ast.$scope, blockscope_config.environments, blockscope_config.globals);
+createTopScope(ast.$scope, options.environments, options.globals);
 traverse(ast, {pre: setupReferences});
 //ast.$scope.print(); process.exit(-1);
 traverse(ast, {pre: detectLoopClosuresPre, post: detectLoopClosuresPost});

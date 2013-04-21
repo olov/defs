@@ -6,7 +6,7 @@ const stringset = require("stringset");
 const is = require("simple-is");
 const fmt = require("simple-fmt");
 const error = require("./error");
-const config = require("./config");
+const options = require("./options");
 
 function Scope(args) {
     assert(is.someof(args.kind, ["hoist", "block", "catch-block"]));
@@ -60,7 +60,7 @@ Scope.prototype.add = function(name, kind, node, referableFromPos) {
         }
     }
     // name exists in scope and either new or existing kind is const|let => error
-    if (scope.decls.has(name) && (config.disallowDuplicated || isConstLet(scope.decls.get(name).kind) || isConstLet(kind))) {
+    if (scope.decls.has(name) && (options.disallowDuplicated || isConstLet(scope.decls.get(name).kind) || isConstLet(kind))) {
         return error(node.loc.start.line, "{0} is already declared", name);
     }
 
