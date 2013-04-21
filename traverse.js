@@ -12,7 +12,7 @@ function traverse(root, options) {
             return;
         }
 
-        if (!is.in(node, "$parent")) {
+        if (!is.own(node, "$parent")) {
             node.$parent = parent;
         }
 
