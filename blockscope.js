@@ -199,7 +199,10 @@ function createTopScope(programScope) {
         parent: null,
     });
 
-    inject({undefined: false});
+    inject({
+        undefined: false,
+        Infinity: false,
+    });
 
     if (fs.existsSync("blockscope-config.json")) {
         const vars = require("./jshint_globals/vars.js");
@@ -217,7 +220,7 @@ function createTopScope(programScope) {
         standards.forEach(function(standard) {
             assert(vars[standard]);
             inject(vars[standard]);
-        })
+        });
     }
 
     programScope.parent = topScope;
@@ -231,7 +234,8 @@ function setupReferences(node) {
     if (!scope && config.disallowUnknownReferences) {
         error(getline(node), "reference to unknown global variable {0}", node.name);
     }
-    if (scope) {
+    // check const and let for referenced-before-declaration
+    if (scope && is.someof(scope.getKind(node.name), ["const", "let"])) {
         const allowedFromPos = scope.getFromPos(node.name);
         const referencedAtPos = node.range[0];
         assert(is.finitenumber(allowedFromPos));
