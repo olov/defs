@@ -11,6 +11,7 @@ const traverse = require("./traverse");
 const Scope = require("./scope");
 const error = require("./error");
 const config = require("./config");
+const jshint_vars = require("./jshint_globals/vars.js");
 
 if (process.argv.length <= 2) {
     console.log("USAGE: node --harmony blockscope.js file.js");
@@ -205,7 +206,6 @@ function createTopScope(programScope) {
     });
 
     if (fs.existsSync("blockscope-config.json")) {
-        const vars = require("./jshint_globals/vars.js");
         const config = {};
         const configJson = JSON.parse(String(fs.readFileSync("blockscope-config.json")));
         configJson.readonly.forEach(function(name) {
@@ -218,8 +218,8 @@ function createTopScope(programScope) {
 
         const standards = configJson.standards;
         standards.forEach(function(standard) {
-            assert(vars[standard]);
-            inject(vars[standard]);
+            assert(jshint_vars[standard]);
+            inject(jshint_vars[standard]);
         });
     }
 
