@@ -6,9 +6,9 @@ const assert = require("assert");
 const is = require("simple-is");
 const fmt = require("simple-fmt");
 const stringset = require("stringset");
+const alter = require("alter");
 const traverse = require("./traverse");
 const Scope = require("./scope");
-const alter = require("./alter");
 const error = require("./error");
 const config = require("./config");
 
