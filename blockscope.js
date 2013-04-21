@@ -24,6 +24,9 @@ if (!fs.existsSync(filename)) {
     process.exit(-1);
 }
 
+const blockscope_config = (fs.existsSync("blockscope-config.json") ?
+    JSON.parse(String(fs.readFileSync("blockscope-config.json"))) : {});
+
 const src = String(fs.readFileSync(filename));
 const ast = esprima(src, {
     loc: true,
@@ -178,7 +181,7 @@ function createScopes(node) {
     }
 }
 
-function createTopScope(programScope) {
+function createTopScope(programScope, environments, globals) {
     function inject(obj) {
         for (let name in obj) {
             const writeable = obj[name];
@@ -200,27 +203,25 @@ function createTopScope(programScope) {
         parent: null,
     });
 
-    inject({
+    const complementary = {
         undefined: false,
         Infinity: false,
-    });
+    };
 
-    if (fs.existsSync("blockscope-config.json")) {
-        const config = {};
-        const configJson = JSON.parse(String(fs.readFileSync("blockscope-config.json")));
-        configJson.readonly.forEach(function(name) {
-            config[name] = false;
+    inject(complementary);
+    inject(jshint_vars.reservedVars);
+    inject(jshint_vars.ecmaIdentifiers);
+    if (environments) {
+        environments.forEach(function(env) {
+            if (!jshint_vars[env]) {
+                error(-1, 'environment "{0}" not found', env);
+            } else {
+                inject(jshint_vars[env]);
+            }
         });
-        configJson.writeable.forEach(function(name) {
-            config[name] = true;
-        });
-        inject(config);
-
-        const standards = configJson.standards;
-        standards.forEach(function(standard) {
-            assert(jshint_vars[standard]);
-            inject(jshint_vars[standard]);
-        });
+    }
+    if (globals) {
+        inject(globals);
     }
 
     programScope.parent = topScope;
@@ -427,7 +428,7 @@ function detectConstantLets(ast) {
 // TODO detect unused variables (never read)
 
 traverse(ast, {pre: createScopes});
-createTopScope(ast.$scope);
+createTopScope(ast.$scope, blockscope_config.environments, blockscope_config.globals);
 traverse(ast, {pre: setupReferences});
 //ast.$scope.print(); process.exit(-1);
 traverse(ast, {pre: detectLoopClosuresPre, post: detectLoopClosuresPost});
