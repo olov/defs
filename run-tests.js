@@ -12,7 +12,7 @@ const tests = fs.readdirSync("tests").filter(function(filename) {
 
 function run(test) {
     const noSuffix = test.slice(0, -3);
-    exec(fmt("node --harmony blockscope tests/{0}", test), function(error, stdout, stderr) {
+    exec(fmt("node --harmony main tests/{0}", test), function(error, stdout, stderr) {
         stderr = stderr || "";
         stdout = stdout || "";
         const expectedStderr = slurp(fmt("tests/{0}-stderr", noSuffix));

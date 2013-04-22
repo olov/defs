@@ -12,31 +12,8 @@ const Scope = require("./scope");
 const error = require("./error");
 const options = require("./options");
 const jshint_vars = require("./jshint_globals/vars.js");
-
-if (process.argv.length <= 2) {
-    console.log("USAGE: node --harmony blockscope.js file.js");
-    process.exit(-1);
-}
-const filename = process.argv[2];
-
-if (!fs.existsSync(filename)) {
-    console.log(fmt("error: file not found <{0}>", filename));
-    process.exit(-1);
-}
-
-const blockscope_config = (fs.existsSync("blockscope-config.json") ?
-    JSON.parse(String(fs.readFileSync("blockscope-config.json"))) : {});
-
-for (let key in blockscope_config) {
-    options[key] = blockscope_config[key];
-}
-
-const src = String(fs.readFileSync(filename));
-const ast = esprima(src, {
-    loc: true,
-    range: true,
-});
 const allIdenfitiers = stringset();
+
 
 function getline(node) {
     return node.loc.start.line;
@@ -268,7 +245,7 @@ function unique(name) {
 // TODO for loops init and body props are parallel to each other but init scope is outer that of body
 // TODO is this a problem?
 
-function varify(ast) {
+function varify(ast, src) {
     const changes = [];
 
     function renameDeclaration(node) {
@@ -429,24 +406,37 @@ function detectConstantLets(ast) {
 }
 
 
-// TODO detect unused variables (never read)
+function run(src, config) {
+    // alter the options singleton with user configuration
+    for (let key in config) {
+        options[key] = config[key];
+    }
 
-traverse(ast, {pre: createScopes});
-createTopScope(ast.$scope, options.environments, options.globals);
-traverse(ast, {pre: setupReferences});
-//ast.$scope.print(); process.exit(-1);
-traverse(ast, {pre: detectLoopClosuresPre, post: detectLoopClosuresPost});
-traverse(ast, {pre: detectConstAssignment});
-//detectConstantLets(ast);
-if (error.any) {
-    process.exit(-1);
+    const ast = esprima(src, {
+        loc: true,
+        range: true,
+    });
+
+    // TODO detect unused variables (never read)
+
+    traverse(ast, {pre: createScopes});
+    createTopScope(ast.$scope, options.environments, options.globals);
+    traverse(ast, {pre: setupReferences});
+    //ast.$scope.print(); process.exit(-1);
+    traverse(ast, {pre: detectLoopClosuresPre, post: detectLoopClosuresPost});
+    traverse(ast, {pre: detectConstAssignment});
+    //detectConstantLets(ast);
+    if (error.any) {
+        return {
+            exitcode: -1,
+        };
+    }
+
+    const transformedSrc = varify(ast, src);
+    return {
+        exitcode: 0,
+        src: transformedSrc,
+    };
 }
 
-const transformedSrc = varify(ast);
-process.stdout.write(transformedSrc);
-
-//console.dir(ast);
-
-function srcFor(node) {
-    return src.slice(node.range[0], node.range[1]);
-}
+module.exports = run;
