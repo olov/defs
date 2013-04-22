@@ -12,7 +12,8 @@ const Scope = require("./scope");
 const error = require("./error");
 const options = require("./options");
 const jshint_vars = require("./jshint_globals/vars.js");
-const allIdenfitiers = stringset();
+
+let allIdenfitiers = null;
 
 
 function getline(node) {
@@ -418,6 +419,8 @@ function run(src, config) {
     });
 
     // TODO detect unused variables (never read)
+    allIdenfitiers = stringset();
+    error.reset();
 
     traverse(ast, {pre: createScopes});
     createTopScope(ast.$scope, options.environments, options.globals);

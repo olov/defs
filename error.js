@@ -12,6 +12,11 @@ function error(line, var_args) {
     console.error(fmt("line {0}: {1}", line, msg));
     error.any = true;
 }
+
+error.reset = function() {
+    error.any = false;
+};
+
 error.any = false;
 
 module.exports = error;
