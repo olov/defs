@@ -1,6 +1,7 @@
 "use strict";
 
 const fs = require("fs");
+const fmt = require("simple-fmt");
 const tryor = require("tryor");
 const blockscope = require("./blockscope");
 
