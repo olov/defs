@@ -75,6 +75,16 @@ Scope.prototype.add = function(name, kind, node, referableFromPos) {
     });
 };
 
+Scope.prototype.addGlobal = function(name, kind, node, referableFromPos) {
+    assert(is.someof(kind, ["fun", "param", "var", "caught", "const", "let"]));
+    assert(this.parent === null);
+    this.decls.set(name, {
+        kind: kind,
+        node: node,
+        from: referableFromPos,
+    });
+};
+
 Scope.prototype.getKind = function(name) {
     assert(is.string(name));
     const decl = this.decls.get(name);

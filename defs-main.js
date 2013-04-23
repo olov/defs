@@ -69,7 +69,12 @@ function isLvalue(node) {
 
 function addToScope(scope, name, kind, node, referableFromPos) {
     allIdenfitiers.add(name);
-    scope.add(name, kind,node, referableFromPos);
+    scope.add(name, kind, node, referableFromPos);
+}
+
+function addToTopScope(scope, name, kind) {
+    allIdenfitiers.add(name);
+    scope.addGlobal(name, kind, {loc: {start: {line: -1}}}, -1);
 }
 
 function createScopes(node) {
@@ -167,15 +172,18 @@ function createTopScope(programScope, environments, globals) {
     function inject(obj) {
         for (let name in obj) {
             const writeable = obj[name];
-            const existingKind = topScope.getKind(name);
             const kind = (writeable ? "var" : "const");
-            if (existingKind) {
-                if (existingKind !== kind) {
-                    error(-1, "global variable {0} writeable and read-only clash", name);
-                }
-            } else {
-                addToScope(topScope, name, kind, {loc: {start: {line: -1}}}, -1);
-            }
+            addToTopScope(topScope, name, kind);
+
+//            addToScope(topScope, name, kind, {loc: {start: {line: -1}}}, -1);
+//            const existingKind = topScope.getKind(name);
+//            if (existingKind) {
+//                if (existingKind !== kind) {
+//                    error(-1, "global variable {0} writeable and read-only clash", name);
+//                }
+//            } else {
+//                addToScope(topScope, name, kind, {loc: {start: {line: -1}}}, -1);
+//            }
         }
     }
 

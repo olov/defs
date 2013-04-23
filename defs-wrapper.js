@@ -3,10 +3,10 @@
 const fs = require("fs");
 const fmt = require("simple-fmt");
 const tryor = require("tryor");
-const blockscope = require("./blockscope");
+const defs = require("./defs-main");
 
 if (process.argv.length <= 2) {
-    console.log("USAGE: node --harmony main.js file.js");
+    console.log("USAGE: defs file.js");
     process.exit(-1);
 }
 const filename = process.argv[2];
@@ -19,10 +19,10 @@ if (!fs.existsSync(filename)) {
 const src = String(fs.readFileSync(filename));
 
 const config = tryor(function() {
-    return JSON.parse(String(fs.readFileSync("blockscope-config.json")));
+    return JSON.parse(String(fs.readFileSync("defs-config.json")));
 }, {});
 
-const ret = blockscope(src, config);
+const ret = defs(src, config);
 if (ret.exitcode !== 0) {
     process.exit(ret.exitcode);
 }

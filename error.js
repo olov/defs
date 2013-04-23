@@ -9,7 +9,7 @@ function error(line, var_args) {
     const msg = (arguments.length === 2 ?
         String(var_args) : fmt.apply(fmt, Array.prototype.slice.call(arguments, 1)));
 
-    console.error(fmt("line {0}: {1}", line, msg));
+    console.error(line === -1 ? msg : fmt("line {0}: {1}", line, msg));
     error.any = true;
 }
 
