@@ -196,6 +196,7 @@ function createTopScope(programScope, environments, globals) {
     const complementary = {
         undefined: false,
         Infinity: false,
+        console: false,
     };
 
     inject(complementary);
