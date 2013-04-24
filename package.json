@@ -24,11 +24,16 @@
     "let",
     "const",
     "var",
-    "es6"
+    "es6",
+    "transpile",
+    "transpiler",
+    "lint",
+    "linter"
   ],
   "scripts": {
     "test": "node --harmony run-tests"
   },
+  "bin": "./defs",
   "author": "Olov Lassus <olov.lassus@gmail.com>",
   "license": "MIT"
 }
