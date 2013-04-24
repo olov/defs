@@ -18,39 +18,44 @@ More command line options is coming.
 
 
 ## Configuration
-`defs.js` looks for a `defs-config.json` configuration file in your current
+`defs` looks for a `defs-config.json` configuration file in your current
 directory. It will search for it in parent directories soon as you'd expect.
 
 Example `defs-config.json`:
-```javascript```
-{
-    "environments": ["node", "browser"],
 
-    "globals": {
-        "my": false,
-        "hat": true
-    },
-    "disallowVars": false,
-    "disallowDuplicated": true,
-    "disallowUnknownReferences": true
-}
-```
+    {
+        "environments": ["node", "browser"],
+
+        "globals": {
+            "my": false,
+            "hat": true
+        },
+        "disallowVars": false,
+        "disallowDuplicated": true,
+        "disallowUnknownReferences": true
+    }
+
 `globals` lets you list your program's globals, and indicate whether they are
-writable (`true`) or read-only (`false`), just like `jshint`. `environments`
-lets you import a set of pre-defined globals, here `node` and `browser`.
-These default environments are borrowed from `jshint` (see
+writable (`true`) or read-only (`false`), just like `jshint`.
+
+`environments` lets you import a set of pre-defined globals, here `node` and
+`browser`. These default environments are borrowed from `jshint` (see
 `jshint_globals/vars.js`).
-* `disallowVars` (defaults to `false`) can be enabled to make
+
+`disallowVars` (defaults to `false`) can be enabled to make
 usage of `var` an error.
-* `disallowDuplicated` (defaults to `true`) errors on duplicated
- `var` definitions in the same function scope.
-* `disallowUnknownReferences` (defaults to `true`) errors on references to
- unknown global variables.
+
+`disallowDuplicated` (defaults to `true`) errors on duplicated
+`var` definitions in the same function scope.
+
+`disallowUnknownReferences` (defaults to `true`) errors on references to
+unknown global variables.
 
 
 ## Example
 
 Input `example.js`:
+
 ```javascript
 "use strict";
 function fn() {
@@ -64,7 +69,8 @@ function fn() {
 fn();
 ```
 
-Output from `~ % defs example.js`:
+Output from running `defs example.js`:
+
 ```javascript
 "use strict";
 function fn() {
