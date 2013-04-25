@@ -89,7 +89,7 @@ fn();
 ```
 
 
-## Compatability
+## Compatibility
 `defs.js` strives to transpile your program as true to the ES6 block scope semantics as possible,
  while being as unintrusive as possible. The only textual differences you'll find between your
  original and transpiled program is that the latter uses `var` and occasional variable renames.
