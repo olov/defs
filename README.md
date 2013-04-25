@@ -44,7 +44,7 @@ writable (`true`) or read-only (`false`), just like `jshint`.
 
 `environments` lets you import a set of pre-defined globals, here `node` and
 `browser`. These default environments are borrowed from `jshint` (see
-`jshint_globals/vars.js`).
+[jshint_globals/vars.js](https://github.com/olov/defs/blob/master/jshint_globals/vars.js)).
 
 `disallowVars` (defaults to `false`) can be enabled to make
 usage of `var` an error.
