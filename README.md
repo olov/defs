@@ -8,6 +8,10 @@ for browser code. While developing you can rely on the experimental support
 in Chrome (chrome://flags, check Enable experimental JavaScript). `defs.js` is
 also a pretty decent static scope analyzer/linter.
 
+The slides for the talk
+[LET's CONST together, right now (with ES3)](http://blog.lassus.se/files/lets_const_together_ft2013.pdf)
+from Front-Trends 2013 includes more information about `let`, `const` and `defs.js`.
+
 
 ## Installation and usage
     npm install -g defs
