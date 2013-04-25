@@ -92,7 +92,7 @@ fn();
 ## Compatability
 `defs.js` strives to transpile your program as true to the ES6 block scope semantics as possible,
  while being as unintrusive as possible. The only textual differences you'll find between your
- original and transpiled program is that the latter uses `var`s, and occasional variable renames.
+ original and transpiled program is that the latter uses `var` and occasional variable renames.
 
 ### Loop closures limitation
 `defs.js` won't transpile a closure-that-captures-a-block-scoped-variable-inside-a-loop, such
@@ -108,7 +108,7 @@ for (let x = 0; x < 10; x++) {
 With ES6 semantics `y` is bound fresh per loop iteration, so each closure captures a seperate
 instance of `y`, unlike if `y` would have been a `var`. [Actually, even `x` is bound per
 iteration, but v8 (so node) has an
-[open bug](https://code.google.com/p/v8/issues/detail?id=2560) for that).
+[open bug](https://code.google.com/p/v8/issues/detail?id=2560) for that].
 
 To transpile this example, an IIFE or `try-catch` must be inserted, which isn't non-intrusive.
 `defs.js` will detect this case and spit out an error instead, like so:
@@ -127,6 +127,24 @@ for (let x = 0; x < 10; x++) {
 ```
 
 I'm interested in feedback on this based on real-world usage of `defs.js`.
+
+### Referenced (inside closure) before declaration
+`defs.js` detects the vast majority of cases where a variable is referenced prior to
+its declaration. The one case it cannot detect is the following:
+
+```javascript
+function printx() { console.log(x); }
+printx(); // illegal
+let x = 1;
+printx(); // legal
+```
+
+The first call to `printx` is not legal because `x` hasn't been initialized at that point
+of *time*, which is impossible to catch reliably with statical analysis.
+`v8 --harmony` will detect and error on this via run-time checking. `defs.js` will
+happily transpile this example (`let` => `var` and that's it), and the transpiled code
+will print `undefined` on the first call to `printx`. This difference should be a very
+minor problem in practice.
 
 
 ## License
