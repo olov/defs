@@ -121,7 +121,7 @@ To transpile this example, an IIFE or `try-catch` must be inserted, which isn't 
 You need to manually handle this the way we've always done pre-`ES6`,
 for instance like so:
 
-```javascript```
+```javascript
 for (let x = 0; x < 10; x++) {
     (function(y) {
         arr.push(function() { return y; });
