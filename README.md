@@ -55,6 +55,9 @@ usage of `var` an error.
 `disallowUnknownReferences` (defaults to `true`) errors on references to
 unknown global variables.
 
+`ast` (defaults to `false`) produces an AST instead of source code
+(experimental).
+
 
 ## Example
 

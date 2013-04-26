@@ -27,4 +27,9 @@ if (ret.exitcode !== 0) {
     process.exit(ret.exitcode);
 }
 
-process.stdout.write(ret.src);
+if (ret.ast) {
+    process.stdout.write(JSON.stringify(ret.ast, null, 4));
+}
+if (ret.src) {
+    process.stdout.write(ret.src);
+}

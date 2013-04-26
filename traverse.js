@@ -6,13 +6,14 @@ function traverse(root, options) {
     options = options || {};
     const pre = options.pre;
     const post = options.post;
+    const cleanup = options.cleanup;
 
     function visit(node, parent) {
         if (!node || !is.string(node.type)) {
             return;
         }
 
-        if (!is.own(node, "$parent")) {
+        if (!cleanup && !is.own(node, "$parent")) {
             node.$parent = parent;
         }
 
@@ -24,6 +25,9 @@ function traverse(root, options) {
         if (res !== false) {
             for (let prop in node) {
                 if (prop[0] === "$") {
+                    if (cleanup) {
+                        delete node[prop];
+                    }
                     continue;
                 }
 

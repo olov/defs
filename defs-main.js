@@ -284,8 +284,11 @@ function varify(ast, src) {
                 origScope.move(name, newName, hoistScope);
                 addToScope(hoistScope, newName, "var", declarator.id, declarator.range[1]);
 
-                // textchange var x => var x$1
                 if (newName !== name) {
+                    declarator.id.originalName = declarator.id.name;
+                    declarator.id.name = newName;
+
+                    // textchange var x => var x$1
                     changes.push({
                         start: declarator.id.range[0],
                         end: declarator.id.range[1],
@@ -307,7 +310,9 @@ function varify(ast, src) {
         node.$refToScope = move.scope;
 
         if (node.name !== move.name) {
+            node.originalName = node.name;
             node.name = move.name;
+
             changes.push({
                 start: node.range[0],
                 end: node.range[1],
@@ -319,7 +324,7 @@ function varify(ast, src) {
     traverse(ast, {pre: renameDeclaration});
     traverse(ast, {pre: renameReference});
 
-    return alter(src, changes);
+    return changes;
 }
 
 
@@ -415,7 +420,6 @@ function detectConstantLets(ast) {
     ast.$scope.detectUnmodifiedLets();
 }
 
-
 function run(src, config) {
     // alter the options singleton with user configuration
     for (let key in config) {
@@ -444,11 +448,21 @@ function run(src, config) {
         };
     }
 
-    const transformedSrc = varify(ast, src);
-    return {
-        exitcode: 0,
-        src: transformedSrc,
-    };
+    const changes = varify(ast, src);
+
+    if (options.ast) {
+        traverse(ast, {cleanup: true}); // get rid of all added $ properties such as $parent and $scope
+        return {
+            exitcode: 0,
+            ast: ast,
+        };
+    } else {
+        const transformedSrc = alter(src, changes);
+        return {
+            exitcode: 0,
+            src: transformedSrc,
+        };
+    }
 }
 
 module.exports = run;
