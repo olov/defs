@@ -255,7 +255,7 @@ function unique(name) {
 // TODO for loops init and body props are parallel to each other but init scope is outer that of body
 // TODO is this a problem?
 
-function varify(ast, src) {
+function varify(ast) {
     const changes = [];
 
     function renameDeclaration(node) {
@@ -448,7 +448,7 @@ function run(src, config) {
         };
     }
 
-    const changes = varify(ast, src);
+    const changes = varify(ast);
 
     if (options.ast) {
         traverse(ast, {cleanup: true}); // get rid of all added $ properties such as $parent and $scope
