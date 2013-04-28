@@ -58,6 +58,9 @@ unknown global variables.
 `ast` (defaults to `false`) produces an AST instead of source code
 (experimental).
 
+`stats` (defaults to `false`) prints const/let statistics and renames
+(experimental).
+
 
 ## Example
 

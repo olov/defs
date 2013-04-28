@@ -11,6 +11,7 @@ const traverse = require("./traverse");
 const Scope = require("./scope");
 const error = require("./error");
 const options = require("./options");
+const Stats = require("./stats");
 const jshint_vars = require("./jshint_globals/vars.js");
 
 let allIdenfitiers = null;
@@ -255,7 +256,7 @@ function unique(name) {
 // TODO for loops init and body props are parallel to each other but init scope is outer that of body
 // TODO is this a problem?
 
-function varify(ast) {
+function varify(ast, stats) {
     const changes = [];
 
     function renameDeclaration(node) {
@@ -274,6 +275,8 @@ function varify(ast) {
                 assert(declarator.type === "VariableDeclarator");
                 const name = declarator.id.name;
 
+                stats.declarator(node.kind);
+
                 // rename if
                 // 1) name already exists in hoistScope, or
                 // 2) name is already propagated (passed) through hoistScope or manually tainted
@@ -285,7 +288,9 @@ function varify(ast) {
                 addToScope(hoistScope, newName, "var", declarator.id, declarator.range[1]);
 
                 if (newName !== name) {
-                    declarator.id.originalName = declarator.id.name;
+                    stats.rename(name, newName, getline(declarator));
+
+                    declarator.id.originalName = name;
                     declarator.id.name = newName;
 
                     // textchange var x => var x$1
@@ -448,18 +453,21 @@ function run(src, config) {
         };
     }
 
-    const changes = varify(ast);
+    const stats = new Stats();
+    const changes = varify(ast, stats);
 
     if (options.ast) {
         traverse(ast, {cleanup: true}); // get rid of all added $ properties such as $parent and $scope
         return {
             exitcode: 0,
+            stats: stats,
             ast: ast,
         };
     } else {
         const transformedSrc = alter(src, changes);
         return {
             exitcode: 0,
+            stats: stats,
             src: transformedSrc,
         };
     }

@@ -27,6 +27,10 @@ if (ret.exitcode !== 0) {
     process.exit(ret.exitcode);
 }
 
+if (config.stats) {
+    process.stdout.write(ret.stats.toString());
+    process.exit(0);
+}
 if (ret.ast) {
     process.stdout.write(JSON.stringify(ret.ast, null, 4));
 }
