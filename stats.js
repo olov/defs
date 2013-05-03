@@ -38,10 +38,11 @@ Stats.prototype.toString = function() {
         return fmt("\nline {0}: {1} => {2}", rename.line, rename.oldName, rename.newName);
     }).join("");
 
-    const constlets = fmt("{0} const/let ratio ({1} consts, {2} lets)",
-        (this.consts === 0 && this.lets === 0) ? "n/a" :
-            (this.lets === 0 ? "∞" : (this.consts / this.lets).toPrecision(2) + "x"),
-        this.consts, this.lets);
+    const sum = this.consts + this.lets;
+    const constlets = (sum === 0 ?
+        "can't calculate const coverage (0 consts, 0 lets)" :
+        fmt("{0}% const coverage ({1} consts, {2} lets)",
+            Math.floor(100 * this.consts / sum), this.consts, this.lets));
 
     return constlets + renameStr + "\n";
 };
