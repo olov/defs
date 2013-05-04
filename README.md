@@ -96,9 +96,10 @@ fn();
 
 
 ## Compatibility
-`defs.js` strives to transpile your program as true to the ES6 block scope semantics as possible,
- while being as unintrusive as possible. The only textual differences you'll find between your
- original and transpiled program is that the latter uses `var` and occasional variable renames.
+`defs.js` strives to transpile your program as true to the ES6 block scope semantics as
+possible, while being as maximally non-intrusive as possible. The only textual
+differences you'll find between your original and transpiled program is that the latter
+uses `var` and occasional variable renames.
 
 ### Loop closures limitation
 `defs.js` won't transpile a closure-that-captures-a-block-scoped-variable-inside-a-loop, such
@@ -111,13 +112,13 @@ for (let x = 0; x < 10; x++) {
 }
 ```
 
-With ES6 semantics `y` is bound fresh per loop iteration, so each closure captures a seperate
+With ES6 semantics `y` is bound fresh per loop iteration, so each closure captures a separate
 instance of `y`, unlike if `y` would have been a `var`. [Actually, even `x` is bound per
 iteration, but v8 (so node) has an
 [open bug](https://code.google.com/p/v8/issues/detail?id=2560) for that].
 
-To transpile this example, an IIFE or `try-catch` must be inserted, which isn't non-intrusive.
-`defs.js` will detect this case and spit out an error instead, like so:
+To transpile this example, an IIFE or `try-catch` must be inserted, which isn't maximally
+non-intrusive. `defs.js` will detect this case and spit out an error instead, like so:
 
     line 3: can't transform closure. y is defined outside closure, inside loop
 
