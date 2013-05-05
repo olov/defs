@@ -36,6 +36,7 @@ function Scope(args) {
     //           "let"
     //     node: the AST node the declaration corresponds to
     //     from: source code index from which it is visible at earliest
+    //           (only stored for "const", "let" [and "var"] nodes)
     // }
     this.decls = stringmap();
 
@@ -100,25 +101,15 @@ Scope.prototype.add = function(name, kind, node, referableFromPos) {
         return error(node.loc.start.line, "{0} is already declared", name);
     }
 
-    if (kind === "fun" && referableFromPos === null) {
-        referableFromPos = scope.node.range[0];
+    const declaration = {
+        kind: kind,
+        node: node,
+    };
+    if (referableFromPos) {
+        assert(is.someof(kind, ["var", "const", "let"]));
+        declaration.from = referableFromPos;
     }
-
-    scope.decls.set(name, {
-        kind: kind,
-        node: node,
-        from: referableFromPos,
-    });
-};
-
-Scope.prototype.addGlobal = function(name, kind, node, referableFromPos) {
-    assert(is.someof(kind, ["fun", "param", "var", "caught", "const", "let"]));
-    assert(this.parent === null);
-    this.decls.set(name, {
-        kind: kind,
-        node: node,
-        from: referableFromPos,
-    });
+    scope.decls.set(name, declaration);
 };
 
 Scope.prototype.getKind = function(name) {
@@ -156,6 +147,10 @@ Scope.prototype.getMove = function(name) {
 
 Scope.prototype.hasOwn = function(name) {
     return this.decls.has(name);
+};
+
+Scope.prototype.remove = function(name) {
+    return this.decls.delete(name);
 };
 
 Scope.prototype.doesPropagate = function(name) {

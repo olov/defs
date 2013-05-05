@@ -72,11 +72,6 @@ function addToScope(scope, name, kind, node, referableFromPos) {
     scope.add(name, kind, node, referableFromPos);
 }
 
-function addToTopScope(scope, name, kind) {
-    allIdenfitiers.add(name);
-    scope.addGlobal(name, kind, {loc: {start: {line: -1}}}, -1);
-}
-
 function createScopes(node) {
     if (node.$scope) {
         return; // exit if already visited
@@ -103,7 +98,7 @@ function createScopes(node) {
 //            assert(node.type === "FunctionDeclaration"); // no support for named function expressions yet
 
             assert(node.id.type === "Identifier");
-            addToScope(node.$parent.$scope, node.id.name, "fun", node.id, null); //, node.body.range[0]);
+            addToScope(node.$parent.$scope, node.id.name, "fun", node.id, null);
         }
 
         node.$scope = new Scope({
@@ -113,7 +108,7 @@ function createScopes(node) {
         });
 
         node.params.forEach(function(param) {
-            addToScope(node.$scope, param.name, "param", param, -1);
+            addToScope(node.$scope, param.name, "param", param, null);
         });
 
     } else if (node.type === "VariableDeclaration") {
@@ -153,7 +148,7 @@ function createScopes(node) {
             node: node,
             parent: node.$parent.$scope,
         });
-        addToScope(node.$scope, identifier.name, "caught", identifier, identifier.range[1]);
+        addToScope(node.$scope, identifier.name, "caught", identifier, null);
 
         // All hoist-scope keeps track of which variables that are propagated through,
         // i.e. an reference inside the scope points to a declaration outside the scope.
@@ -173,17 +168,10 @@ function createTopScope(programScope, environments, globals) {
         for (let name in obj) {
             const writeable = obj[name];
             const kind = (writeable ? "var" : "const");
-            addToTopScope(topScope, name, kind);
-
-//            addToScope(topScope, name, kind, {loc: {start: {line: -1}}}, -1);
-//            const existingKind = topScope.getKind(name);
-//            if (existingKind) {
-//                if (existingKind !== kind) {
-//                    error(-1, "global variable {0} writeable and read-only clash", name);
-//                }
-//            } else {
-//                addToScope(topScope, name, kind, {loc: {start: {line: -1}}}, -1);
-//            }
+            if (topScope.hasOwn(name)) {
+                topScope.remove(name);
+            }
+            addToScope(topScope, name, kind, {loc: {start: {line: -1}}}, -1);
         }
     }
 
