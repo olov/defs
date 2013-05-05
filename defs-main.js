@@ -67,15 +67,10 @@ function isLvalue(node) {
             (node.$parent.type === "UpdateExpression" && node.$parent.argument === node));
 }
 
-function addToScope(scope, name, kind, node, referableFromPos) {
-    allIdenfitiers.add(name);
-    scope.add(name, kind, node, referableFromPos);
-}
+function createScopes(node, parent) {
+    assert(!node.$scope);
 
-function createScopes(node) {
-    if (node.$scope) {
-        return; // exit if already visited
-    }
+    node.$parent = parent;
     node.$scope = node.$parent ? node.$parent.$scope : null; // may be overridden
 
     if (node.type === "Program") {
@@ -98,7 +93,7 @@ function createScopes(node) {
 //            assert(node.type === "FunctionDeclaration"); // no support for named function expressions yet
 
             assert(node.id.type === "Identifier");
-            addToScope(node.$parent.$scope, node.id.name, "fun", node.id, null);
+            node.$parent.$scope.add(node.id.name, "fun", node.id, null);
         }
 
         node.$scope = new Scope({
@@ -108,7 +103,7 @@ function createScopes(node) {
         });
 
         node.params.forEach(function(param) {
-            addToScope(node.$scope, param.name, "param", param, null);
+            node.$scope.add(param.name, "param", param, null);
         });
 
     } else if (node.type === "VariableDeclaration") {
@@ -120,7 +115,7 @@ function createScopes(node) {
             if (options.disallowVars && node.kind === "var") {
                 error(getline(declarator), "var {0} is not allowed (use let or const)", name);
             }
-            addToScope(node.$scope, name, node.kind, declarator.id, declarator.range[1]);
+            node.$scope.add(name, node.kind, declarator.id, declarator.range[1]);
         });
 
     } else if (isForWithConstLet(node) || isForInWithConstLet(node)) {
@@ -148,7 +143,7 @@ function createScopes(node) {
             node: node,
             parent: node.$parent.$scope,
         });
-        addToScope(node.$scope, identifier.name, "caught", identifier, null);
+        node.$scope.add(identifier.name, "caught", identifier, null);
 
         // All hoist-scope keeps track of which variables that are propagated through,
         // i.e. an reference inside the scope points to a declaration outside the scope.
@@ -171,7 +166,7 @@ function createTopScope(programScope, environments, globals) {
             if (topScope.hasOwn(name)) {
                 topScope.remove(name);
             }
-            addToScope(topScope, name, kind, {loc: {start: {line: -1}}}, -1);
+            topScope.add(name, kind, {loc: {start: {line: -1}}}, -1);
         }
     }
 
@@ -203,13 +198,20 @@ function createTopScope(programScope, environments, globals) {
         inject(globals);
     }
 
+    // link it in
     programScope.parent = topScope;
+    topScope.children.push(programScope);
+
+    return topScope;
 }
+
 
 function setupReferences(node) {
     if (!isReference(node)) {
         return;
     }
+    allIdenfitiers.add(node.name);
+
     const scope = node.$scope.lookup(node.name);
     if (!scope && options.disallowUnknownReferences) {
         error(getline(node), "reference to unknown global variable {0}", node.name);
@@ -227,7 +229,6 @@ function setupReferences(node) {
         }
     }
     node.$refToScope = scope;
-    allIdenfitiers.add(node.name);
 }
 
 function unique(name) {
@@ -272,7 +273,8 @@ function varify(ast, stats) {
 
                 const newName = (rename ? unique(name) : name);
                 origScope.move(name, newName, hoistScope);
-                addToScope(hoistScope, newName, "var", declarator.id, declarator.range[1]);
+                hoistScope.add(newName, "var", declarator.id, declarator.range[1]);
+                allIdenfitiers.add(newName);
 
                 if (newName !== name) {
                     stats.rename(name, newName, getline(declarator));
@@ -424,33 +426,53 @@ function run(src, config) {
     });
 
     // TODO detect unused variables (never read)
-    allIdenfitiers = stringset();
     error.reset();
 
+    // setup scopes
     traverse(ast, {pre: createScopes});
-    createTopScope(ast.$scope, options.environments, options.globals);
+    const topScope = createTopScope(ast.$scope, options.environments, options.globals);
+
+    // allIdentifiers contains all declared and referenced vars
+    // collect all declaration names (including those in topScope)
+    allIdenfitiers = stringset();
+    topScope.traverse({pre: function(scope) {
+        allIdenfitiers.addMany(scope.decls.keys());
+    }});
+
+    // setup node.$refToScope, check for errors.
+    // also collects all referenced names to allIdentifiers
     traverse(ast, {pre: setupReferences});
-    //ast.$scope.print(); process.exit(-1);
+
+    // static analysis passes
     traverse(ast, {pre: detectLoopClosuresPre, post: detectLoopClosuresPost});
     traverse(ast, {pre: detectConstAssignment});
     //detectConstantLets(ast);
+
+    //ast.$scope.print(); process.exit(-1);
+
     if (error.any) {
         return {
             exitcode: -1,
         };
     }
 
+    // change constlet declarations to var, renamed if needed
+    // varify modifies the scopes and AST accordingly and
+    // returns a list of change fragments (to use with alter)
     const stats = new Stats();
     const changes = varify(ast, stats);
 
     if (options.ast) {
-        traverse(ast, {cleanup: true}); // get rid of all added $ properties such as $parent and $scope
+        // return the modified AST instead of src code
+        // get rid of all added $ properties first, such as $parent and $scope
+        traverse(ast, {cleanup: true});
         return {
             exitcode: 0,
             stats: stats,
             ast: ast,
         };
     } else {
+        // apply changes produced by varify and return the transformed src
         const transformedSrc = alter(src, changes);
         return {
             exitcode: 0,
