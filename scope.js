@@ -222,4 +222,24 @@ Scope.prototype.detectUnmodifiedLets = function() {
     detect(this);
 };
 
+Scope.prototype.traverse = function(options) {
+    options = options || {};
+    const pre = options.pre;
+    const post = options.post;
+
+    function visit(scope) {
+        if (pre) {
+            pre(scope);
+        }
+        scope.children.forEach(function(childScope) {
+            visit(childScope);
+        });
+        if (post) {
+            post(scope);
+        }
+    }
+
+    visit(this);
+};
+
 module.exports = Scope;
