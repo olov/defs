@@ -13,13 +13,9 @@ function traverse(root, options) {
             return;
         }
 
-        if (!cleanup && !is.own(node, "$parent")) {
-            node.$parent = parent;
-        }
-
         let res = undefined;
         if (pre) {
-            res = pre(node);
+            res = pre(node, parent);
         }
 
         if (res !== false) {
@@ -44,7 +40,7 @@ function traverse(root, options) {
         }
 
         if (post) {
-            post(node);
+            post(node, parent);
         }
     }
 
