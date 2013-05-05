@@ -40,13 +40,6 @@ function Scope(args) {
     // }
     this.decls = stringmap();
 
-    // history of moved variables. moves[old_name] = {
-    //     name: new name
-    //     scope: new scope
-    // }
-    // TODO store elsewhere?
-    this.moves = stringmap();
-
     // names of all declarations within this scope that was ever written
     // TODO move to decls.w?
     // TODO create corresponding read?
@@ -128,21 +121,6 @@ Scope.prototype.getFromPos = function(name) {
     assert(is.string(name));
     const decl = this.decls.get(name);
     return decl ? decl.from : null;
-};
-
-Scope.prototype.move = function(name, newName, newScope) {
-    assert(is.string(name));
-    assert(is.string(newName));
-    assert(this.decls.has(name));
-    this.decls.delete(name);
-    this.moves.set(name, {
-        name: newName,
-        scope: newScope,
-    });
-};
-
-Scope.prototype.getMove = function(name) {
-    return this.moves.get(name);
 };
 
 Scope.prototype.hasOwn = function(name) {

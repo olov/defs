@@ -4,6 +4,7 @@ const esprima = require("esprima").parse;
 const assert = require("assert");
 const is = require("simple-is");
 const fmt = require("simple-fmt");
+const stringmap = require("stringmap");
 const stringset = require("stringset");
 const alter = require("alter");
 const traverse = require("./traverse");
@@ -273,8 +274,16 @@ function varify(ast, stats, allIdentifiers) {
                     (hoistScope.hasOwn(name) || hoistScope.doesPropagate(name)));
 
                 const newName = (rename ? unique(name) : name);
-                origScope.move(name, newName, hoistScope);
+
+                origScope.remove(name);
                 hoistScope.add(newName, "var", declarator.id, declarator.range[1]);
+
+                origScope.moves = origScope.moves || stringmap();
+                origScope.moves.set(name, {
+                    name: newName,
+                    scope: hoistScope,
+                });
+
                 allIdentifiers.add(newName);
 
                 if (newName !== name) {
@@ -298,7 +307,7 @@ function varify(ast, stats, allIdentifiers) {
         if (!node.$refToScope) {
             return;
         }
-        const move = node.$refToScope.getMove(node.name);
+        const move = node.$refToScope.moves && node.$refToScope.moves.get(node.name);
         if (!move) {
             return;
         }
@@ -318,6 +327,9 @@ function varify(ast, stats, allIdentifiers) {
 
     traverse(ast, {pre: renameDeclarations});
     traverse(ast, {pre: renameReferences});
+    ast.$scope.traverse({pre: function(scope) {
+        delete scope.moves;
+    }});
 
     return changes;
 }
