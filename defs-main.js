@@ -13,8 +13,6 @@ const options = require("./options");
 const Stats = require("./stats");
 const jshint_vars = require("./jshint_globals/vars.js");
 
-let allIdenfitiers = null;
-
 
 function getline(node) {
     return node.loc.start.line;
@@ -205,47 +203,50 @@ function createTopScope(programScope, environments, globals) {
     return topScope;
 }
 
+function setupReferences(ast, allIdentifiers) {
+    function visit(node) {
+        if (!isReference(node)) {
+            return;
+        }
+        allIdentifiers.add(node.name);
 
-function setupReferences(node) {
-    if (!isReference(node)) {
-        return;
-    }
-    allIdenfitiers.add(node.name);
-
-    const scope = node.$scope.lookup(node.name);
-    if (!scope && options.disallowUnknownReferences) {
-        error(getline(node), "reference to unknown global variable {0}", node.name);
-    }
-    // check const and let for referenced-before-declaration
-    if (scope && is.someof(scope.getKind(node.name), ["const", "let"])) {
-        const allowedFromPos = scope.getFromPos(node.name);
-        const referencedAtPos = node.range[0];
-        assert(is.finitenumber(allowedFromPos));
-        assert(is.finitenumber(referencedAtPos));
-        if (referencedAtPos < allowedFromPos) {
-            if (!node.$scope.hasFunctionScopeBetween(scope)) {
-                error(getline(node), "{0} is referenced before its declaration", node.name);
+        const scope = node.$scope.lookup(node.name);
+        if (!scope && options.disallowUnknownReferences) {
+            error(getline(node), "reference to unknown global variable {0}", node.name);
+        }
+        // check const and let for referenced-before-declaration
+        if (scope && is.someof(scope.getKind(node.name), ["const", "let"])) {
+            const allowedFromPos = scope.getFromPos(node.name);
+            const referencedAtPos = node.range[0];
+            assert(is.finitenumber(allowedFromPos));
+            assert(is.finitenumber(referencedAtPos));
+            if (referencedAtPos < allowedFromPos) {
+                if (!node.$scope.hasFunctionScopeBetween(scope)) {
+                    error(getline(node), "{0} is referenced before its declaration", node.name);
+                }
             }
         }
+        node.$refToScope = scope;
     }
-    node.$refToScope = scope;
-}
 
-function unique(name) {
-    assert(allIdenfitiers.has(name));
-    for (let cnt = 0; ; cnt++) {
-        const genName = name + "$" + String(cnt);
-        if (!allIdenfitiers.has(genName)) {
-            return genName;
-        }
-    }
+    traverse(ast, {pre: visit});
 }
 
 // TODO for loops init and body props are parallel to each other but init scope is outer that of body
 // TODO is this a problem?
 
-function varify(ast, stats) {
+function varify(ast, stats, allIdentifiers) {
     const changes = [];
+
+    function unique(name) {
+        assert(allIdentifiers.has(name));
+        for (let cnt = 0; ; cnt++) {
+            const genName = name + "$" + String(cnt);
+            if (!allIdentifiers.has(genName)) {
+                return genName;
+            }
+        }
+    }
 
     function renameDeclarations(node) {
         if (node.type === "VariableDeclaration" && isConstLet(node.kind)) {
@@ -274,7 +275,7 @@ function varify(ast, stats) {
                 const newName = (rename ? unique(name) : name);
                 origScope.move(name, newName, hoistScope);
                 hoistScope.add(newName, "var", declarator.id, declarator.range[1]);
-                allIdenfitiers.add(newName);
+                allIdentifiers.add(newName);
 
                 if (newName !== name) {
                     stats.rename(name, newName, getline(declarator));
@@ -434,14 +435,14 @@ function run(src, config) {
 
     // allIdentifiers contains all declared and referenced vars
     // collect all declaration names (including those in topScope)
-    allIdenfitiers = stringset();
+    const allIdentifiers = stringset();
     topScope.traverse({pre: function(scope) {
-        allIdenfitiers.addMany(scope.decls.keys());
+        allIdentifiers.addMany(scope.decls.keys());
     }});
 
     // setup node.$refToScope, check for errors.
     // also collects all referenced names to allIdentifiers
-    traverse(ast, {pre: setupReferences});
+    setupReferences(ast, allIdentifiers);
 
     // static analysis passes
     traverse(ast, {pre: detectLoopClosuresPre, post: detectLoopClosuresPost});
@@ -460,7 +461,7 @@ function run(src, config) {
     // varify modifies the scopes and AST accordingly and
     // returns a list of change fragments (to use with alter)
     const stats = new Stats();
-    const changes = varify(ast, stats);
+    const changes = varify(ast, stats, allIdentifiers);
 
     if (options.ast) {
         // return the modified AST instead of src code
