@@ -13,15 +13,51 @@ function Scope(args) {
     assert(is.object(args.node));
     assert(args.parent === null || is.object(args.parent));
 
+    // kind === "hoist": function scopes, program scope, injected globals
+    // kind === "block": ES6 block scopes
+    // kind === "catch-block": catch block scopes
     this.kind = args.kind;
+
+    // the AST node the block corresponds to
     this.node = args.node;
+
+    // parent scope
     this.parent = args.parent;
+
+    // children scopes for easier traversal (populated internally)
     this.children = [];
+
+    // scope declarations. decls[variable_name] = {
+    //     kind: "fun" for functions,
+    //           "param" for function parameters,
+    //           "caught" for catch parameter
+    //           "var",
+    //           "const",
+    //           "let"
+    //     node: the AST node the declaration corresponds to
+    //     from: source code index from which it is visible at earliest
+    // }
     this.decls = stringmap();
+
+    // history of moved variables. moves[old_name] = {
+    //     name: new name
+    //     scope: new scope
+    // }
+    // TODO store elsewhere?
     this.moves = stringmap();
+
+    // names of all declarations within this scope that was ever written
+    // TODO move to decls.w?
+    // TODO create corresponding read?
     this.written = stringset();
+
+    // names of all variables declared outside this hoist scope but
+    // referenced in this scope (immediately or in child).
+    // only stored on hoist scopes for efficiency
+    // (because we currently generate lots of empty block scopes)
     this.propagates = (this.kind === "hoist" ? stringset() : null);
 
+    // scopes register themselves with their parents for easier traversal
     if (this.parent) {
         this.parent.children.push(this);
     }

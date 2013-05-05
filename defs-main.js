@@ -1,7 +1,6 @@
 "use strict";
 
 const esprima = require("esprima").parse;
-const fs = require("fs");
 const assert = require("assert");
 const is = require("simple-is");
 const fmt = require("simple-fmt");
@@ -259,7 +258,7 @@ function unique(name) {
 function varify(ast, stats) {
     const changes = [];
 
-    function renameDeclaration(node) {
+    function renameDeclarations(node) {
         if (node.type === "VariableDeclaration" && isConstLet(node.kind)) {
             const hoistScope = node.$scope.closestHoistScope();
             const origScope = node.$scope;
@@ -304,7 +303,7 @@ function varify(ast, stats) {
         }
     }
 
-    function renameReference(node) {
+    function renameReferences(node) {
         if (!node.$refToScope) {
             return;
         }
@@ -326,8 +325,8 @@ function varify(ast, stats) {
         }
     }
 
-    traverse(ast, {pre: renameDeclaration});
-    traverse(ast, {pre: renameReference});
+    traverse(ast, {pre: renameDeclarations});
+    traverse(ast, {pre: renameReferences});
 
     return changes;
 }
