@@ -70,8 +70,35 @@ Scope.prototype.print = function(indent) {
     });
 };
 
-Scope.prototype.add = function(name, kind, node, referableFromPos) {
+function isObjectPattern(node) {
+    return node && node.type == 'ObjectPattern';
+}
+
+function isArrayPattern(node) {
+    return node && node.type == 'ArrayPattern';
+}
+
+function isFunction(node) {
+    return is.someof(node.type, ["FunctionDeclaration", "FunctionExpression"]);
+}
+
+Scope.prototype.add = function(name, kind, node, referableFromPos, originalDeclarator) {
     assert(is.someof(kind, ["fun", "param", "var", "caught", "const", "let"]));
+
+    if (!name && isObjectPattern(node)) {
+        node.properties.forEach(function(Property) {
+            Property && this.add(Property.value.name, kind, Property.value, referableFromPos, Property.key)
+        }, this);
+
+        return;
+    }
+    if (!name && isArrayPattern(node)) {
+        node.elements.forEach(function(element) {
+            element && this.add(element.name, kind, element, element.range[0])
+        }, this);
+
+        return;
+    }
 
     function isConstLet(kind) {
         return is.someof(kind, ["const", "let"]);
@@ -100,7 +127,12 @@ Scope.prototype.add = function(name, kind, node, referableFromPos) {
     };
     if (referableFromPos) {
         assert(is.someof(kind, ["var", "const", "let"]));
-        declaration.from = referableFromPos;
+        if (originalDeclarator) {
+            declaration.from = originalDeclarator.range[0]
+        }
+        else {
+            declaration.from = referableFromPos;
+        }
     }
     scope.decls.set(name, declaration);
 };
@@ -148,9 +180,6 @@ Scope.prototype.closestHoistScope = function() {
 };
 
 Scope.prototype.hasFunctionScopeBetween = function(outer) {
-    function isFunction(node) {
-        return is.someof(node.type, ["FunctionDeclaration", "FunctionExpression"]);
-    }
 
     for (let scope = this; scope; scope = scope.parent) {
         if (scope === outer) {
