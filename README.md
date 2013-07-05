@@ -117,6 +117,7 @@ assert(res.src === "var x = 1");
 ```
 
 res object:
+
     {
         src: string // on success
         errors: array of error messages // on errors
