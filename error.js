@@ -9,14 +9,13 @@ function error(line, var_args) {
     const msg = (arguments.length === 2 ?
         String(var_args) : fmt.apply(fmt, Array.prototype.slice.call(arguments, 1)));
 
-    console.error(line === -1 ? msg : fmt("line {0}: {1}", line, msg));
-    error.any = true;
+    error.errors.push(line === -1 ? msg : fmt("line {0}: {1}", line, msg));
 }
 
 error.reset = function() {
-    error.any = false;
+    error.errors = [];
 };
 
-error.any = false;
+error.reset();
 
 module.exports = error;

@@ -463,9 +463,9 @@ function run(src, config) {
 
     //ast.$scope.print(); process.exit(-1);
 
-    if (error.any) {
+    if (error.errors.length >= 1) {
         return {
-            exitcode: -1,
+            errors: error.errors,
         };
     }
 
