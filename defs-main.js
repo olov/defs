@@ -480,7 +480,6 @@ function run(src, config) {
         // get rid of all added $ properties first, such as $parent and $scope
         traverse(ast, {cleanup: true});
         return {
-            exitcode: 0,
             stats: stats,
             ast: ast,
         };
@@ -488,7 +487,6 @@ function run(src, config) {
         // apply changes produced by varify and return the transformed src
         const transformedSrc = alter(src, changes);
         return {
-            exitcode: 0,
             stats: stats,
             src: transformedSrc,
         };
