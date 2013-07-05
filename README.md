@@ -23,6 +23,8 @@ Then run it as `defs file.js`. The errors (if any) will go to stderr,
 the transpiled source to `stdout`, so redirect it like `defs file.js > output.js`.
 More command line options are coming.
 
+There's also a [Grunt](http://gruntjs.com/) plugin, see [grunt-defs](https://npmjs.org/package/grunt-defs).
+
 
 ## License
 `MIT`, see [LICENSE](LICENSE) file.
