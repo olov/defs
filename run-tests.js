@@ -12,7 +12,7 @@ const tests = fs.readdirSync("tests").filter(function(filename) {
 
 function run(test) {
     const noSuffix = test.slice(0, -3);
-    exec(fmt("node --harmony defs-wrapper tests/{0}", test), function(error, stdout, stderr) {
+    exec(fmt("{0} {1} defs-wrapper tests/{2}", NODE, FLAG, test), function(error, stdout, stderr) {
         stderr = stderr || "";
         stdout = stdout || "";
         const expectedStderr = slurp(fmt("tests/{0}-stderr", noSuffix));
@@ -36,4 +36,6 @@ function run(test) {
     });
 }
 
+const NODE = process.argv[0];
+const FLAG = (process.argv[2] === "es5" ? "" : "--harmony");
 tests.forEach(run);
