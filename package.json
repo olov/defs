@@ -2,7 +2,7 @@
   "name": "defs",
   "version": "0.3.0",
   "description": "Static scope analysis and transpilation of ES6 block scoped const and let variables, to ES3.",
-  "main": "defs-main.js",
+  "main": "build/defs-main.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/olov/defs.git"
