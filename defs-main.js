@@ -51,7 +51,7 @@ function isReference(node) {
     return node.$refToScope ||
         node.type === "Identifier" &&
         !(node.$parent.type === "VariableDeclarator" && node.$parent.id === node) && // var|let|const $
-        !(node.$parent.type === "MemberExpression" && node.$parent.property === node) && // obj.$
+        !(node.$parent.type === "MemberExpression" && node.$parent.computed === false && node.$parent.property === node) && // obj.$
         !(node.$parent.type === "Property" && node.$parent.key === node) && // {$: ...}
         !(node.$parent.type === "LabeledStatement" && node.$parent.label === node) && // $: ...
         !(node.$parent.type === "CatchClause" && node.$parent.param === node) && // catch($)
