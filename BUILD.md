@@ -9,10 +9,11 @@ as the build scripts. It does not contain build artefacts (transpiled or
 bundled source).
 
 The build scripts populates the `build/es5` and `build/browser` directories.
-The NPM package includes both of these and `package.json` refers to the
-transpiled version in `build/es5`, so there's no need to execute node with
-`--harmony` when running a `npm -g` installed `defs` from the command line
-or when doing a `require("defs")` of the same.
+The NPM package contains a snapshot of the git repository at the time as
+well as `build/es5`. `package.json` refers to the transpiled version in
+`build/es5`, so there's no need to execute node with `--harmony` when
+running a `npm -g` installed `defs` from the command line or when doing a
+`require("defs")` of the same.
 
 If you clone the git repository then don't forget to also `npm install` the
 dependencies (see `package.json`).
@@ -36,5 +37,7 @@ To build, `cd build` then run `./build.sh` for self transpilation and
 `./bundle.sh` to create a (self transpiled) browser bundle using Browserify.
 Open up `build/browser/index.html` in your favorite browser to test the
 latter. `./clean.sh` removes the build artefacts.
+
+I use `prepare.sh` to prepare a release tarball for NPM publishing.
 
 Happy hacking!
