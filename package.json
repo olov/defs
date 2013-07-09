@@ -1,6 +1,6 @@
 {
   "name": "defs",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Static scope analysis and transpilation of ES6 block scoped const and let variables, to ES3.",
   "main": "build/es5/defs-main.js",
   "repository": {
