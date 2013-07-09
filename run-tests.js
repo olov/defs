@@ -6,17 +6,19 @@ function slurp(filename) {
     return fs.existsSync(filename) ? String(fs.readFileSync(filename)) : "";
 }
 
-const tests = fs.readdirSync("tests").filter(function(filename) {
+const pathToTests = (fs.existsSync("tests") ? "tests" : "../../tests");
+
+const tests = fs.readdirSync(pathToTests).filter(function(filename) {
     return !/-out\.js$/.test(filename) && !/-stderr$/.test(filename);
 });
 
 function run(test) {
     const noSuffix = test.slice(0, -3);
-    exec(fmt("{0} {1} defs-wrapper tests/{2}", NODE, FLAG, test), function(error, stdout, stderr) {
+    exec(fmt("{0} {1} defs-wrapper {2}/{3}", NODE, FLAG, pathToTests, test), function(error, stdout, stderr) {
         stderr = stderr || "";
         stdout = stdout || "";
-        const expectedStderr = slurp(fmt("tests/{0}-stderr", noSuffix));
-        const expectedStdout = slurp(fmt("tests/{0}-out.js", noSuffix));
+        const expectedStderr = slurp(fmt("{0}/{1}-stderr", pathToTests, noSuffix));
+        const expectedStdout = slurp(fmt("{0}/{1}-out.js", pathToTests, noSuffix));
 
         if (stderr !== expectedStderr) {
             fail("stderr", stderr, expectedStderr);

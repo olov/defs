@@ -11,15 +11,9 @@ do
 done
 
 cp defs es5/
+cp -r ../jshint_globals es5/
 
 cd es5
-
-declare -a symlinks=(node_modules jshint_globals tests)
-for i in ${symlinks[@]}
-do
-  echo "symlinking $i"
-  ln -s ../../$i $i
-done
 
 echo "running tests (in es5 mode i.e. without --harmony)"
 /usr/bin/env node run-tests.js es5
