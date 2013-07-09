@@ -25,6 +25,7 @@ More command line options are coming.
 
 There's also a [Grunt](http://gruntjs.com/) plugin, see [grunt-defs](https://npmjs.org/package/grunt-defs).
 
+See [BUILD.md](BUILD.md) for a description of the self-build and the browser bundle.
 
 ## License
 `MIT`, see [LICENSE](LICENSE) file.
