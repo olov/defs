@@ -48,15 +48,16 @@ function isLoop(node) {
 }
 
 function isReference(node) {
+    const parent = node.$parent;
     return node.$refToScope ||
         node.type === "Identifier" &&
-        !(node.$parent.type === "VariableDeclarator" && node.$parent.id === node) && // var|let|const $
-        !(node.$parent.type === "MemberExpression" && node.$parent.computed === false && node.$parent.property === node) && // obj.$
-        !(node.$parent.type === "Property" && node.$parent.key === node) && // {$: ...}
-        !(node.$parent.type === "LabeledStatement" && node.$parent.label === node) && // $: ...
-        !(node.$parent.type === "CatchClause" && node.$parent.param === node) && // catch($)
-        !(isFunction(node.$parent) && node.$parent.id === node) && // function $(..
-        !(isFunction(node.$parent) && is.someof(node, node.$parent.params)) && // function f($)..
+        !(parent.type === "VariableDeclarator" && parent.id === node) && // var|let|const $
+        !(parent.type === "MemberExpression" && parent.computed === false && parent.property === node) && // obj.$
+        !(parent.type === "Property" && parent.key === node) && // {$: ...}
+        !(parent.type === "LabeledStatement" && parent.label === node) && // $: ...
+        !(parent.type === "CatchClause" && parent.param === node) && // catch($)
+        !(isFunction(parent) && parent.id === node) && // function $(..
+        !(isFunction(parent) && is.someof(node, parent.params)) && // function f($)..
         true;
 }
 
