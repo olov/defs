@@ -12,6 +12,8 @@ function error(line, var_args) {
     error.errors.push(line === -1 ? msg : fmt("line {0}: {1}", line, msg));
 }
 
+error.errors = [];
+
 error.reset = function() {
     error.errors = [];
 };

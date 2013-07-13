@@ -1,6 +1,11 @@
 "use strict";
 
-const esprima = require("esprima").parse;
+//const esprima = require("./esprima_harmony").parse;
+const esprima = require(
+        process.argv.some(function(arg){ return arg === "--es6" })
+        ? "./esprima_harmony" // Local copy of esprima harmony branch // FIXME
+        : "esprima"
+    ).parse;
 const assert = require("assert");
 const is = require("simple-is");
 const fmt = require("simple-fmt");
@@ -67,6 +72,14 @@ function isLvalue(node) {
             (node.$parent.type === "UpdateExpression" && node.$parent.argument === node));
 }
 
+function isObjectPattern(node) {
+    return node && node.type == 'ObjectPattern';
+}
+
+function isArrayPattern(node) {
+    return node && node.type == 'ArrayPattern';
+}
+
 function createScopes(node, parent) {
     assert(!node.$scope);
 
@@ -115,7 +128,7 @@ function createScopes(node, parent) {
             if (options.disallowVars && node.kind === "var") {
                 error(getline(declarator), "var {0} is not allowed (use let or const)", name);
             }
-            node.$scope.add(name, node.kind, declarator.id, declarator.range[1]);
+            node.$scope.add(name, node.kind, declarator.id, declarator.range[1], declarator);
         });
 
     } else if (isForWithConstLet(node) || isForInWithConstLet(node)) {
@@ -249,7 +262,7 @@ function varify(ast, stats, allIdentifiers) {
             }
         }
     }
-
+    
     function renameDeclarations(node) {
         if (node.type === "VariableDeclaration" && isConstLet(node.kind)) {
             const hoistScope = node.$scope.closestHoistScope();
@@ -262,9 +275,55 @@ function varify(ast, stats, allIdentifiers) {
                 str: "var",
             });
 
-            node.declarations.forEach(function(declarator) {
+            let declarations = node.declarations.slice();
+            for (let i = 0 ; i < declarations.length ; i++) {
+                let decl = declarations[i];
+                if (isObjectPattern(decl.id)) {
+                    declarations.splice(i, 1);
+
+                    const id = decl.id;
+                    for (let properties = id.properties, k = 0, l = properties.length ; k < l ; k++) {
+                        const property = properties[k];
+                        if (property) {
+                            declarations.splice(i, 0, {
+                                id: property,
+                                type: decl.type,
+                                range: property.range,
+                                loc: property.loc,
+                                $type: "ObjectPattern"
+                            });
+                        }
+                    }
+                }
+                else if (isArrayPattern(decl.id)) {
+                    declarations.splice(i, 1);
+
+                    const id = decl.id;
+                    for (let elements = id.elements, k = 0, l = elements.length ; k < l ; k++) {
+                        const element = elements[k];
+                        if (element) {
+                            declarations.splice(i, 0, {
+                                id: element,
+                                type: decl.type,
+                                range: element.range,
+                                loc: element.loc
+                            });
+                        }
+                    }
+                }
+            }
+
+            declarations.forEach(function(declarator) {
                 assert(declarator.type === "VariableDeclarator");
-                const name = declarator.id.name;
+
+                let name, prefix = "";
+                if (declarator.$type == "ObjectPattern") {
+                    name = declarator.id.value.name;
+                    prefix = declarator.id.key.name + " :";
+                }
+                else {
+                    name = declarator.id.name;
+                }
 
                 stats.declarator(node.kind);
 
@@ -297,7 +356,7 @@ function varify(ast, stats, allIdentifiers) {
                     changes.push({
                         start: declarator.id.range[0],
                         end: declarator.id.range[1],
-                        str: newName,
+                        str: prefix + newName,
                     });
                 }
             });
@@ -314,7 +373,12 @@ function varify(ast, stats, allIdentifiers) {
         }
         node.$refToScope = move.scope;
 
-        if (node.name !== move.name) {
+        if (node.name !== move.name
+            && !(//not a destructuring
+                isObjectPattern(node.$parent && node.$parent.$parent)
+                || isArrayPattern(node.$parent && node.$parent.$parent)
+            )
+        ) {
             node.originalName = node.name;
             node.name = move.name;
 
@@ -475,6 +539,13 @@ function run(src, config) {
     // returns a list of change fragments (to use with alter)
     const stats = new Stats();
     const changes = varify(ast, stats, allIdentifiers);
+
+    if (error.any) {
+        error.show();
+        return {
+            exitcode: -1,
+        };
+    }
 
     if (options.ast) {
         // return the modified AST instead of src code

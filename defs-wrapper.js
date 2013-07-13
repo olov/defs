@@ -5,11 +5,27 @@ const fmt = require("simple-fmt");
 const tryor = require("tryor");
 const defs = require("./defs-main");
 
-if (process.argv.length <= 2) {
+let fileArgvIndex = 2;
+const commandVariables = {};
+process.argv.forEach(function(arg, index, array) {
+    var nextArg;
+    if( arg.indexOf("--") === 0 ) {
+        fileArgvIndex++;
+        if( (nextArg = array[index + 1]) && nextArg.indexOf("--") !== 0 ) {
+            this[arg.substring(2)] = nextArg.indexOf("--") === 0 ? true : nextArg;
+        }
+        else {
+            this[arg.substring(2)] = true;
+        }
+    }
+}, commandVariables);
+
+const filename = process.argv[fileArgvIndex];
+
+if (!filename) {
     console.log("USAGE: defs file.js");
     process.exit(-1);
 }
-const filename = process.argv[2];
 
 if (!fs.existsSync(filename)) {
     console.log(fmt("error: file not found <{0}>", filename));
