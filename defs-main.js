@@ -2,10 +2,10 @@
 
 //const esprima = require("./esprima_harmony").parse;
 const esprima = require(
-		process.argv.some(function(arg){ return arg === "--harmony" })
-		? "./esprima_harmony" // Local copy of esprima harmony branch // FIXME
-		: "esprima"
-	).parse;
+        process.argv.some(function(arg){ return arg === "--es6" })
+        ? "./esprima_harmony" // Local copy of esprima harmony branch // FIXME
+        : "esprima"
+    ).parse;
 const assert = require("assert");
 const is = require("simple-is");
 const fmt = require("simple-fmt");
