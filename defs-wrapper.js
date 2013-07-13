@@ -23,8 +23,10 @@ const config = tryor(function() {
 }, {});
 
 const ret = defs(src, config);
-if (ret.exitcode !== 0) {
-    process.exit(ret.exitcode);
+if (ret.errors) {
+    process.stderr.write(ret.errors.join("\n"));
+    process.stderr.write("\n");
+    process.exit(-1);
 }
 
 if (config.stats) {

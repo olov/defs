@@ -1,6 +1,11 @@
 "use strict";
 
-const esprima = require("./esprima_harmony").parse;
+//const esprima = require("./esprima_harmony").parse;
+const esprima = require(
+		process.argv.some(function(arg){ return arg === "--harmony" })
+		? "./esprima_harmony" // Local copy of esprima harmony branch // FIXME
+		: "esprima"
+	).parse;
 const assert = require("assert");
 const is = require("simple-is");
 const fmt = require("simple-fmt");
@@ -48,15 +53,16 @@ function isLoop(node) {
 }
 
 function isReference(node) {
+    const parent = node.$parent;
     return node.$refToScope ||
         node.type === "Identifier" &&
-        !(node.$parent.type === "VariableDeclarator" && node.$parent.id === node) && // var|let|const $
-        !(node.$parent.type === "MemberExpression" && node.$parent.property === node) && // obj.$
-        !(node.$parent.type === "Property" && node.$parent.key === node) && // {$: ...}
-        !(node.$parent.type === "LabeledStatement" && node.$parent.label === node) && // $: ...
-        !(node.$parent.type === "CatchClause" && node.$parent.param === node) && // catch($)
-        !(isFunction(node.$parent) && node.$parent.id === node) && // function $(..
-        !(isFunction(node.$parent) && is.someof(node, node.$parent.params)) && // function f($)..
+        !(parent.type === "VariableDeclarator" && parent.id === node) && // var|let|const $
+        !(parent.type === "MemberExpression" && parent.computed === false && parent.property === node) && // obj.$
+        !(parent.type === "Property" && parent.key === node) && // {$: ...}
+        !(parent.type === "LabeledStatement" && parent.label === node) && // $: ...
+        !(parent.type === "CatchClause" && parent.param === node) && // catch($)
+        !(isFunction(parent) && parent.id === node) && // function $(..
+        !(isFunction(parent) && is.someof(node, parent.params)) && // function f($)..
         true;
 }
 
@@ -522,10 +528,9 @@ function run(src, config) {
 
     //ast.$scope.print(); process.exit(-1);
 
-    if (error.any) {
-        error.show();
+    if (error.errors.length >= 1) {
         return {
-            exitcode: -1,
+            errors: error.errors,
         };
     }
 
@@ -547,7 +552,6 @@ function run(src, config) {
         // get rid of all added $ properties first, such as $parent and $scope
         traverse(ast, {cleanup: true});
         return {
-            exitcode: 0,
             stats: stats,
             ast: ast,
         };
@@ -555,7 +559,6 @@ function run(src, config) {
         // apply changes produced by varify and return the transformed src
         const transformedSrc = alter(src, changes);
         return {
-            exitcode: 0,
             stats: stats,
             src: transformedSrc,
         };

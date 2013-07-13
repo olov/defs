@@ -4105,11 +4105,11 @@ parseYieldExpression: true
         }
 		else {
             param = parseVariableIdentifier();
-			
+
 			if( hasDefaults && !match('=') && !rest ) {
 				throwErrorTolerant({}, Messages.ParameterAfterDefaultParameter, param.name);
 			}
-			
+
             validateParam(options, token, token.value);
         }
 
@@ -4120,9 +4120,9 @@ parseYieldExpression: true
             if (!match(')')) {
                 throwError({}, Messages.ParameterAfterRestParameter);
             }
-			
+
             options.rest = param;
-			
+
             return false;
         }
 
@@ -4131,7 +4131,7 @@ parseYieldExpression: true
 		}
         return !match(')');
     }
-	
+
 	function parseParamDefault(options) {
 		if (match('=')) {
 			lex();

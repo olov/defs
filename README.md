@@ -8,9 +8,12 @@ for browser code. While developing you can rely on the experimental support
 in Chrome (chrome://flags, check Enable experimental JavaScript). `defs.js` is
 also a pretty decent static scope analyzer/linter.
 
-The slides for the talk
-[LET's CONST together, right now (with ES3)](http://blog.lassus.se/files/lets_const_together_ft2013.pdf)
-from Front-Trends 2013 includes more information about `let`, `const` and `defs.js`.
+The talk
+[LET's CONST together, right now (with ES3)](http://vimeo.com/66501924)
+from Front-Trends 2013
+([slides](http://blog.lassus.se/files/lets_const_together_ft2013.pdf)) includes
+more information about `let`, `const` and `defs.js`. See also the blog post
+[ES3 <3 block scoped const and let => defs.js](http://blog.lassus.se/2013/05/defsjs.html).
 
 
 ## Installation and usage
@@ -18,7 +21,18 @@ from Front-Trends 2013 includes more information about `let`, `const` and `defs.
 
 Then run it as `defs file.js`. The errors (if any) will go to stderr,
 the transpiled source to `stdout`, so redirect it like `defs file.js > output.js`.
-More command line options is coming.
+More command line options are coming.
+
+There's also a [Grunt](http://gruntjs.com/) plugin, see [grunt-defs](https://npmjs.org/package/grunt-defs).
+
+See [BUILD.md](BUILD.md) for a description of the self-build and the browser bundle.
+
+## License
+`MIT`, see [LICENSE](LICENSE) file.
+
+
+## Changes
+See [CHANGES.md](CHANGES.md).
 
 
 ## Configuration
@@ -95,11 +109,32 @@ fn();
 ```
 
 
+## defs.js used as a library
+`npm install defs`, then:
+
+```javascript
+const defs = require("defs");
+const options = {};
+const res = defs("const x = 1", options);
+assert(res.src === "var x = 1");
+```
+
+res object:
+
+    {
+        src: string // on success
+        errors: array of error messages // on errors
+        stats: statistics object (toStringable)
+        ast: transformed ast // when options.ast is set
+    }
+
+
 ## Compatibility
 `defs.js` strives to transpile your program as true to the ES6 block scope semantics as
 possible, while being as maximally non-intrusive as possible. The only textual
 differences you'll find between your original and transpiled program is that the latter
 uses `var` and occasional variable renames.
+
 
 ### Loop closures limitation
 `defs.js` won't transpile a closure-that-captures-a-block-scoped-variable-inside-a-loop, such
@@ -135,6 +170,7 @@ for (let x = 0; x < 10; x++) {
 
 I'm interested in feedback on this based on real-world usage of `defs.js`.
 
+
 ### Referenced (inside closure) before declaration
 `defs.js` detects the vast majority of cases where a variable is referenced prior to
 its declaration. The one case it cannot detect is the following:
@@ -152,7 +188,3 @@ of *time*, which is impossible to catch reliably with statical analysis.
 happily transpile this example (`let` => `var` and that's it), and the transpiled code
 will print `undefined` on the first call to `printx`. This difference should be a very
 minor problem in practice.
-
-
-## License
-`MIT`, see LICENSE file.
