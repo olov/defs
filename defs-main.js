@@ -85,22 +85,27 @@ function createScopes(node, parent) {
     } else if (isFunction(node)) {
         // Function is a scope, with params in it
         // There's no block-scope under it
-        // Function name goes in parent scope
-        if (node.id) {
-//            if (node.type === "FunctionExpression") {
-//                console.dir(node.id);
-//            }
-//            assert(node.type === "FunctionDeclaration"); // no support for named function expressions yet
-
-            assert(node.id.type === "Identifier");
-            node.$parent.$scope.add(node.id.name, "fun", node.id, null);
-        }
 
         node.$scope = new Scope({
             kind: "hoist",
             node: node,
             parent: node.$parent.$scope,
         });
+
+        // function has a name
+        if (node.id) {
+            assert(node.id.type === "Identifier");
+
+            if (node.type === "FunctionDeclaration") {
+                // Function name goes in parent scope for declared functions
+                node.$parent.$scope.add(node.id.name, "fun", node.id, null);
+            } else if (node.type === "FunctionExpression") {
+                // Function name goes in function's scope for named function expressions
+                node.$scope.add(node.id.name, "fun", node.id, null);
+            } else {
+                assert(false);
+            }
+        }
 
         node.params.forEach(function(param) {
             node.$scope.add(param.name, "param", param, null);
