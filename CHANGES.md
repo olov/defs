@@ -1,3 +1,6 @@
+## v0.4.1 2013-07-28
+ * Bugfix named function expressions (issue #12)
+
 ## v0.4 2013-07-10
  * defs became self aware
  * NPM package includes (and defaults to) the self-transpiled version
