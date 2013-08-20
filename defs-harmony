@@ -1,2 +1,0 @@
-#!/usr/bin/env node --harmony
-require("./defs-wrapper");
