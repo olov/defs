@@ -1,7 +1,0 @@
-{
-    "environments": ["node"],
-    "disallowDuplicated": true,
-    "disallowUnknownReferences": true,
-    "ast": false,
-    "stats": false
-}
