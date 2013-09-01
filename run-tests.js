@@ -14,7 +14,7 @@ const tests = fs.readdirSync(pathToTests).filter(function(filename) {
 
 function run(test) {
     const noSuffix = test.slice(0, -3);
-    exec(fmt("{0} {1} defs-wrapper {2}/{3}", NODE, FLAG, pathToTests, test), function(error, stdout, stderr) {
+    exec(fmt("{0} {1} defs-cmd {2}/{3}", NODE, FLAG, pathToTests, test), function(error, stdout, stderr) {
         stderr = stderr || "";
         stdout = stdout || "";
         const expectedStderr = slurp(fmt("{0}/{1}-stderr", pathToTests, noSuffix));

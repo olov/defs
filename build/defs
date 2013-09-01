@@ -1,2 +1,2 @@
-#!/usr/bin/env node
-require("./defs-wrapper");
+#!/bin/sh
+/usr/bin/env node $(cd $(dirname $(readlink "$0" || echo "$0")) && pwd -P)/defs-cmd.js $@
