@@ -484,7 +484,13 @@ function run(src, config) {
     if (options.ast) {
         // return the modified AST instead of src code
         // get rid of all added $ properties first, such as $parent and $scope
-        traverse(ast, {cleanup: true});
+        traverse(ast, {pre: function(node) {
+            for (let prop in node) {
+                if (prop[0] === "$") {
+                    delete node[prop];
+                }
+            }
+        }});
         return {
             stats: stats,
             ast: ast,

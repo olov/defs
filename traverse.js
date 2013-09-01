@@ -1,36 +1,30 @@
 "use strict";
 
-const is = require("simple-is");
-
 function traverse(root, options) {
     options = options || {};
-    const pre = options.pre;
-    const post = options.post;
-    const cleanup = options.cleanup;
+    var pre = options.pre;
+    var post = options.post;
 
     function visit(node, parent) {
-        if (!node || !is.string(node.type)) {
+        if (!node || typeof node.type !== "string") {
             return;
         }
 
-        let res = undefined;
+        var res = undefined;
         if (pre) {
             res = pre(node, parent);
         }
 
         if (res !== false) {
-            for (let prop in node) {
+            for (var prop in node) {
                 if (prop[0] === "$") {
-                    if (cleanup) {
-                        delete node[prop];
-                    }
                     continue;
                 }
 
-                const child = node[prop];
+                var child = node[prop];
 
                 if (Array.isArray(child)) {
-                    for (let i = 0; i < child.length; i++) {
+                    for (var i = 0; i < child.length; i++) {
                         visit(child[i], node);
                     }
                 } else {
