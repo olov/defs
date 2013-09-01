@@ -7,7 +7,7 @@ declare -a files=(defs-main.js defs-wrapper.js error.js options.js run-tests.js 
 for i in ${files[@]}
 do
   echo "building $i"
-  ../defs-harmony ../$i > es5/$i
+  node --harmony ../defs-wrapper ../$i > es5/$i
 done
 
 cp defs es5/
