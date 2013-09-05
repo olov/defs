@@ -1,3 +1,11 @@
+## v0.4.3 2013-09-05
+ * Improved loop closure detection as to remove false positives
+ * Improved wrapper shell script (symlink handling)
+
+## v0.4.2 2013-09-01
+ * Improved wrapper script and runner for Linux compat
+ * breakout module ast-traverse
+
 ## v0.4.1 2013-07-28
  * Bugfix named function expressions (issue #12)
 
