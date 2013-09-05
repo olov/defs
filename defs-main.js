@@ -341,73 +341,41 @@ function varify(ast, stats, allIdentifiers) {
 }
 
 
-let outermostLoop = null;
-let functions = [];
-function detectLoopClosuresPre(node) {
-    if (outermostLoop === null && isLoop(node)) {
-        outermostLoop = node;
-    }
-    if (!outermostLoop) {
-        // not inside loop
-        return;
-    }
-
-    // collect function-chain (as long as we're inside a loop)
-    if (isFunction(node)) {
-        functions.push(node);
-    }
-    if (functions.length === 0) {
-        // not inside function
-        return;
-    }
-
-    if (isReference(node) && isConstLet(node.$refToScope.getKind(node.name))) {
-        let n = node.$refToScope.node;
-
-        // node is an identifier
-        // scope refers to the scope where the variable is defined
-        // loop ..-> function ..-> node
-
-        let ok = true;
-        while (n) {
-//            n.print();
-//            console.log("--");
-            if (n === functions[functions.length - 1]) {
+function detectLoopClosures(node) {
+    // forbidden pattern:
+    // <any>* <loop> <non-fn>* <constlet-def> <any>* <fn> <any>* <constlet-ref>
+    if (isReference(node) && node.$refToScope && isConstLet(node.$refToScope.getKind(node.name))) {
+        // traverse nodes up towards root from var-def
+        // if we hit a function (before a loop) - ok!
+        // if we hit a loop - maybe-ouch
+        // if we reach root - ok!
+        for (let n = node.$refToScope.node; ; ) {
+            if (isFunction(n)) {
                 // we're ok (function-local)
-                break;
-            }
-            if (n === outermostLoop) {
+                return;
+            } else if (isLoop(n)) {
                 // not ok (between loop and function)
-                ok = false;
                 break;
             }
-//            console.log("# " + scope.node.type);
             n = n.$parent;
-//            console.log("# " + scope.node);
-        }
-        if (ok) {
-//            console.log("ok loop + closure: " + node.name);
-        } else {
-            error(getline(node), "can't transform closure. {0} is defined outside closure, inside loop", node.name);
+            if (!n) {
+                // ok (reached root)
+                return;
+            }
         }
 
-
-        /*
-        walk the scopes, starting from innermostFunction, ending at outermostLoop
-        if the referenced scope is somewhere in-between, then we have an issue
-        if the referenced scope is inside innermostFunction, then no problem (function-local const|let)
-        if the referenced scope is outside outermostLoop, then no problem (const|let external to the loop)
-
-         */
-    }
-}
-
-function detectLoopClosuresPost(node) {
-    if (outermostLoop === node) {
-        outermostLoop = null;
-    }
-    if (isFunction(node)) {
-        functions.pop();
+        // traverse scopes from reference-scope up towards definition-scope
+        // if we hit a function, ouch!
+        const defScope = node.$refToScope;
+        for (let s = node.$scope; s; s = s.parent) {
+            if (s === defScope) {
+                // we're ok
+                return;
+            } else if (isFunction(s.node)) {
+                // not ok (there's a function between the reference and definition)
+                error(getline(node), "can't transform closure. {0} is defined outside closure, inside loop", node.name);
+            }
+        }
     }
 }
 
@@ -433,6 +401,34 @@ function detectConstantLets(ast) {
     ast.$scope.detectUnmodifiedLets();
 }
 
+function setupScopeAndReferences(root) {
+    // setup scopes
+    traverse(root, {pre: createScopes});
+    const topScope = createTopScope(root.$scope, options.environments, options.globals);
+
+    // allIdentifiers contains all declared and referenced vars
+    // collect all declaration names (including those in topScope)
+    const allIdentifiers = stringset();
+    topScope.traverse({pre: function(scope) {
+        allIdentifiers.addMany(scope.decls.keys());
+    }});
+
+    // setup node.$refToScope, check for errors.
+    // also collects all referenced names to allIdentifiers
+    setupReferences(root, allIdentifiers);
+    return allIdentifiers;
+}
+
+function cleanupTree(root) {
+    traverse(root, {pre: function(node) {
+        for (let prop in node) {
+            if (prop[0] === "$") {
+                delete node[prop];
+            }
+        }
+    }});
+}
+
 function run(src, config) {
     // alter the options singleton with user configuration
     for (let key in config) {
@@ -447,23 +443,10 @@ function run(src, config) {
     // TODO detect unused variables (never read)
     error.reset();
 
-    // setup scopes
-    traverse(ast, {pre: createScopes});
-    const topScope = createTopScope(ast.$scope, options.environments, options.globals);
-
-    // allIdentifiers contains all declared and referenced vars
-    // collect all declaration names (including those in topScope)
-    const allIdentifiers = stringset();
-    topScope.traverse({pre: function(scope) {
-        allIdentifiers.addMany(scope.decls.keys());
-    }});
-
-    // setup node.$refToScope, check for errors.
-    // also collects all referenced names to allIdentifiers
-    setupReferences(ast, allIdentifiers);
+    let allIdentifiers = setupScopeAndReferences(ast);
 
     // static analysis passes
-    traverse(ast, {pre: detectLoopClosuresPre, post: detectLoopClosuresPost});
+    traverse(ast, {pre: detectLoopClosures});
     traverse(ast, {pre: detectConstAssignment});
     //detectConstantLets(ast);
 
@@ -484,13 +467,7 @@ function run(src, config) {
     if (options.ast) {
         // return the modified AST instead of src code
         // get rid of all added $ properties first, such as $parent and $scope
-        traverse(ast, {pre: function(node) {
-            for (let prop in node) {
-                if (prop[0] === "$") {
-                    delete node[prop];
-                }
-            }
-        }});
+        cleanupTree(ast);
         return {
             stats: stats,
             ast: ast,
