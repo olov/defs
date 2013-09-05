@@ -14,6 +14,17 @@ for (var x = 0; x < 10; x++) {
     arr.push(function() { return y; });
 }
 
+// fresh y per iteration so can't be transformed
+while (true) {
+    var f = function() {
+        for (var x = 0; x < 10; x++) {
+            let y = x;
+            arr.push(function() { return y; });
+        }
+    };
+    f();
+}
+
 // fresh x per iteration so can't be transformed
 for (let x in [0,1,2]) {
     arr.push(function() { return x; });
