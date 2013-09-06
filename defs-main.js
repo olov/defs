@@ -342,11 +342,41 @@ function varify(ast, stats, allIdentifiers) {
 
 
 function detectLoopClosures(node) {
+    function detectIifyBodyBlockers(body, node) {
+        try {
+            traverse(body, {pre: function(n) {
+                // if we hit an inner function of the loop body, don't traverse further
+                if (isFunction(n)) {
+                    return false;
+                }
+
+                let err = true; // reset to false in else-statement below
+                if (n.type === "BreakStatement") {
+                    error(getline(node), "can't transform loop-closure due to use of break at line {1}. {0} is defined outside closure, inside loop", node.name, getline(n));
+                } else if (n.type === "ContinueStatement") {
+                    error(getline(node), "can't transform loop-closure due to use of continue at line {1}. {0} is defined outside closure, inside loop", node.name, getline(n));
+                } else if (n.type === "ReturnStatement") {
+                    error(getline(node), "can't transform loop-closure due to use of return at line {1}. {0} is defined outside closure, inside loop", node.name, getline(n));
+                } else if (n.type === "Identifier" && n.name === "arguments") {
+                    error(getline(node), "can't transform loop-closure due to use of arguments at line {1}. {0} is defined outside closure, inside loop", node.name, getline(n));
+                } else {
+                    err = false;
+                }
+                if (err) {
+                    throw 0; // break traversal
+                }
+            }});
+        } catch(e) {
+            return true;
+        }
+        return false;
+    }
+
     // forbidden pattern:
     // <any>* <loop> <non-fn>* <constlet-def> <any>* <fn> <any>* <constlet-ref>
     var loopNode = null;
     if (isReference(node) && node.$refToScope && isConstLet(node.$refToScope.getKind(node.name))) {
-        // traverse nodes up towards root from var-def
+        // traverse nodes up towards root from constlet-def
         // if we hit a function (before a loop) - ok!
         // if we hit a loop - maybe-ouch
         // if we reach root - ok!
@@ -356,7 +386,7 @@ function detectLoopClosures(node) {
                 return;
             } else if (isLoop(n)) {
                 loopNode = n;
-                // not ok (between loop and function)
+                // maybe not ok (between loop and function)
                 break;
             }
             n = n.$parent;
@@ -369,18 +399,35 @@ function detectLoopClosures(node) {
         // traverse scopes from reference-scope up towards definition-scope
         // if we hit a function, ouch!
         const defScope = node.$refToScope;
+        const generateIIFE = true; // TODO get from options
+
         for (let s = node.$scope; s; s = s.parent) {
             if (s === defScope) {
                 // we're ok
                 return;
             } else if (isFunction(s.node)) {
                 // not ok (there's a function between the reference and definition)
-                // TODO much more analysis
-                if (loopNode.type === "ForStatement" && loopNode.body.type === "BlockStatement") {
-                    loopNode.$iify = true;
-                } else {
-                    error(getline(node), "can't transform closure. {0} is defined outside closure, inside loop", node.name);
+                // may be transformable via IIFE
+
+                // limit IIFE to for(;;) {} for now (TODO all loops)
+                if (!generateIIFE || loopNode.type !== "ForStatement" || loopNode.body.type !== "BlockStatement") {
+                    return error(getline(node), "can't transform closure. {0} is defined outside closure, inside loop", node.name);
                 }
+
+                // here be dragons
+                if (defScope.node === loopNode) {
+                    const declarationNode = defScope.getNode(node.name);
+                    return error(getline(declarationNode), "Not yet specced ES6 feature. {0} is declared in for-loop header and then captured in loop closure", declarationNode.name);
+                }
+
+                // speak now or forever hold your peace
+                if (detectIifyBodyBlockers(loopNode.body, node)) {
+                    // error already generated
+                    return;
+                }
+
+                // mark loop for IIFE-insertion
+                loopNode.$iify = true;
             }
         }
     }
