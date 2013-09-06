@@ -26,9 +26,9 @@ while (true) {
 }
 
 // fresh x per iteration so can't be transformed
-for (let x in [0,1,2]) {
-    arr.push(function() { return x; });
-}
+//for (let x in [0,1,2]) {
+//    arr.push(function() { return x; });
+//}
 
 arr.forEach(function(f) {
     console.log(f());

@@ -344,6 +344,7 @@ function varify(ast, stats, allIdentifiers) {
 function detectLoopClosures(node) {
     // forbidden pattern:
     // <any>* <loop> <non-fn>* <constlet-def> <any>* <fn> <any>* <constlet-ref>
+    var loopNode = null;
     if (isReference(node) && node.$refToScope && isConstLet(node.$refToScope.getKind(node.name))) {
         // traverse nodes up towards root from var-def
         // if we hit a function (before a loop) - ok!
@@ -354,6 +355,7 @@ function detectLoopClosures(node) {
                 // we're ok (function-local)
                 return;
             } else if (isLoop(n)) {
+                loopNode = n;
                 // not ok (between loop and function)
                 break;
             }
@@ -373,10 +375,55 @@ function detectLoopClosures(node) {
                 return;
             } else if (isFunction(s.node)) {
                 // not ok (there's a function between the reference and definition)
-                error(getline(node), "can't transform closure. {0} is defined outside closure, inside loop", node.name);
+                // TODO much more analysis
+                if (loopNode.type === "ForStatement" && loopNode.body.type === "BlockStatement") {
+                    loopNode.$iify = true;
+                } else {
+                    error(getline(node), "can't transform closure. {0} is defined outside closure, inside loop", node.name);
+                }
             }
         }
     }
+}
+
+function transformLoops(root) {
+    // TODO *Work in progress*
+    // TODO support ForIn, While, DoWhile
+    const ops = [];
+
+    traverse(root, {pre: function(node) {
+        if (!node.$iify) {
+            return;
+        }
+        assert(node.type === "ForStatement");
+        assert(node.body.type === "BlockStatement"); // for now
+        const insertHead = node.body.range[0] + 1; // just after body {
+        const insertFoot = node.body.range[1] - 1; // just before body }
+
+        ops.push({
+            start: insertHead,
+            end: insertHead,
+            str: "(function(){",
+        });
+        ops.push({
+            start: insertFoot,
+            end: insertFoot,
+            str: "}).call(this);",
+        })
+
+        const iifeFragment = esprima("(function(){}).call(this)");
+        const iifeExpressionStatement = iifeFragment.body[0];
+
+        const forBlockStatement = node.body;
+        assert(is.array(forBlockStatement.body));
+        const oldForBlockStatementBody = forBlockStatement.body;
+        assert(is.array(forBlockStatement.body));
+        forBlockStatement.body = [iifeExpressionStatement];
+        const iifeBlockStatement = iifeExpressionStatement.expression.callee.object.body;
+        iifeBlockStatement.body = oldForBlockStatementBody;
+    }});
+
+    return ops;
 }
 
 function detectConstAssignment(node) {
@@ -450,6 +497,12 @@ function run(src, config) {
     traverse(ast, {pre: detectConstAssignment});
     //detectConstantLets(ast);
 
+    const loopChanges = transformLoops(ast);
+    if (loopChanges.length > 0) {
+        cleanupTree(ast);
+        allIdentifiers = setupScopeAndReferences(ast);
+    }
+
     //ast.$scope.print(); process.exit(-1);
 
     if (error.errors.length >= 1) {
@@ -462,7 +515,7 @@ function run(src, config) {
     // varify modifies the scopes and AST accordingly and
     // returns a list of change fragments (to use with alter)
     const stats = new Stats();
-    const changes = varify(ast, stats, allIdentifiers);
+    const changes = loopChanges.concat(varify(ast, stats, allIdentifiers));
 
     if (options.ast) {
         // return the modified AST instead of src code
