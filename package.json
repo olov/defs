@@ -17,6 +17,9 @@
     "tryor": "~0.1.0",
     "esprima": "~1.0.0"
   },
+  "devDependencies": {
+    "diff": "~1.0.6"
+  },
   "keywords": [
     "defs",
     "scope",

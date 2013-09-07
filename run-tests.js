@@ -1,6 +1,7 @@
 const fs = require("fs");
 const fmt = require("simple-fmt");
 const exec = require("child_process").exec;
+const diff = require("diff");
 
 function slurp(filename) {
     return fs.existsSync(filename) ? String(fs.readFileSync(filename)) : "";
@@ -13,6 +14,14 @@ const tests = fs.readdirSync(pathToTests).filter(function(filename) {
 });
 
 function run(test) {
+    function diffOutput(correct, got, name) {
+        if (got !== correct) {
+            const patch = diff.createPatch(name, correct, got);
+            process.stdout.write(patch);
+            process.stdout.write("\n\n");
+        }
+    }
+
     const noSuffix = test.slice(0, -3);
     exec(fmt("{0} {1} defs-cmd {2}/{3}", NODE, FLAG, pathToTests, test), function(error, stdout, stderr) {
         stderr = stderr || "";
@@ -20,21 +29,13 @@ function run(test) {
         const expectedStderr = slurp(fmt("{0}/{1}-stderr", pathToTests, noSuffix));
         const expectedStdout = slurp(fmt("{0}/{1}-out.js", pathToTests, noSuffix));
 
-        if (stderr !== expectedStderr) {
-            fail("stderr", stderr, expectedStderr);
-        }
-        if (stdout !== expectedStdout) {
-            fail("stdout", stdout, expectedStdout);
-        }
+        const pass = (stderr === expectedStderr && stdout === expectedStdout);
 
-        function fail(type, got, expected) {
+        if (!pass) {
             console.log(fmt("FAILED test {0}", test));
-            console.log(fmt("\nEXPECTED {0}:", type));
-            process.stdout.write(expected);
-            console.log(fmt("\nGOT {0}:", type));
-            process.stdout.write(got);
-            console.log("---------------------------\n");
         }
+        diffOutput(expectedStdout, stdout, fmt("{0}-out.js", test));
+        diffOutput(expectedStderr, stderr, fmt("{0}-stderr", test));
     });
 }
 
