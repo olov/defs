@@ -11,6 +11,9 @@ var arr = [];
 for (let x = 0; x < 3; x++) {
     arr.push(function() { return x; });
 }
+for (let z, x = 0; x < 3; x++) {
+    arr.push(function() { return x; });
+}
 
 // as a consequence of the above, defs is unable to transform
 // the code below (even though it is the output of an earlier
@@ -51,23 +54,6 @@ for (let x = 0; x < 3; x++) {
     arguments[0];
     arr.push(function() { return y; });
 }
-
-
-// TODO these will move to allowed-loop-closures eventually ------------------
-// no support for let-in yet
-for (let x in [0,1,2]) {
-    arr.push(function() { return x; });
-}
-// ditto while
-while (true) {
-    let x = 1;
-    arr.push(function() { return x; });
-}
-// ditto do-while
-do {
-    let x = 1;
-    arr.push(function() { return x; });
-} while (true);
 
 // TODO block-less loops (is that even applicable?)
 

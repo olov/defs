@@ -30,6 +30,12 @@ for (var x$3 = 0; x$3 < 3; x$3++) {(function(){
 }).call(this);}
 
 // can be transformed (added IIFE)
+for (var x$4 = 0; x$4 < 3; x$4++) {(function(){
+    var x = 1;
+    arr.push(function() { return x; });
+}).call(this);}
+
+// can be transformed (added IIFE)
 while (true) {
     var f = function() {
         for (var x = 0; x < 10; x++) {(function(){
@@ -57,6 +63,24 @@ while (true) {
         arr.push(function() { return y; });
     }).call(this);}
 })();
+
+// For-In (TODO fix fail)
+for (var x$5 in [0,1,2]) {(function(x){
+    arr.push(function() { return x; });
+}).call(this, x$5);}
+// TODO block-less for-in?
+
+// While
+while (true) {(function(){
+    var x = 1;
+    arr.push(function() { return x; });
+}).call(this);}
+
+// Do-While
+do {(function(){
+    var x = 1;
+    arr.push(function() { return x; });
+}).call(this);} while (true);
 
 arr.forEach(function(f) {
     console.log(f());

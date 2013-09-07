@@ -409,13 +409,14 @@ function detectLoopClosures(node) {
                 // not ok (there's a function between the reference and definition)
                 // may be transformable via IIFE
 
-                // limit IIFE to for(;;) {} for now (TODO all loops)
-                if (!generateIIFE || loopNode.type !== "ForStatement" || loopNode.body.type !== "BlockStatement") {
+                if (!generateIIFE || !isLoop(loopNode) || loopNode.body.type !== "BlockStatement") {
                     return error(getline(node), "can't transform closure. {0} is defined outside closure, inside loop", node.name);
                 }
 
                 // here be dragons
-                if (defScope.node === loopNode) {
+                // for (let x = ..; .. ; ..) { (function(){x})() } is forbidden because of current
+                // spec and VM status
+                if (loopNode.type === "ForStatement" && defScope.node === loopNode) {
                     const declarationNode = defScope.getNode(node.name);
                     return error(getline(declarationNode), "Not yet specced ES6 feature. {0} is declared in for-loop header and then captured in loop closure", declarationNode.name);
                 }
@@ -442,7 +443,6 @@ function transformLoops(root) {
         if (!node.$iify) {
             return;
         }
-        assert(node.type === "ForStatement");
         assert(node.body.type === "BlockStatement"); // for now
         const insertHead = node.body.range[0] + 1; // just after body {
         const insertFoot = node.body.range[1] - 1; // just before body }
