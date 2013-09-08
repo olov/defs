@@ -210,7 +210,9 @@ function createTopScope(programScope, environments, globals) {
     return topScope;
 }
 
-function setupReferences(ast, allIdentifiers) {
+function setupReferences(ast, allIdentifiers, opts) {
+    const analyze = (is.own(opts, "analyze") ? opts.analyze : true);
+
     function visit(node) {
         if (!isReference(node)) {
             return;
@@ -218,11 +220,11 @@ function setupReferences(ast, allIdentifiers) {
         allIdentifiers.add(node.name);
 
         const scope = node.$scope.lookup(node.name);
-        if (!scope && options.disallowUnknownReferences) {
+        if (analyze && !scope && options.disallowUnknownReferences) {
             error(getline(node), "reference to unknown global variable {0}", node.name);
         }
         // check const and let for referenced-before-declaration
-        if (scope && is.someof(scope.getKind(node.name), ["const", "let"])) {
+        if (analyze && scope && is.someof(scope.getKind(node.name), ["const", "let"])) {
             const allowedFromPos = scope.getFromPos(node.name);
             const referencedAtPos = node.range[0];
             assert(is.finitenumber(allowedFromPos));
@@ -242,9 +244,7 @@ function setupReferences(ast, allIdentifiers) {
 // TODO for loops init and body props are parallel to each other but init scope is outer that of body
 // TODO is this a problem?
 
-function varify(ast, stats, allIdentifiers) {
-    const changes = [];
-
+function varify(ast, stats, allIdentifiers, changes) {
     function unique(name) {
         assert(allIdentifiers.has(name));
         for (let cnt = 0; ; cnt++) {
@@ -323,11 +323,27 @@ function varify(ast, stats, allIdentifiers) {
             node.originalName = node.name;
             node.name = move.name;
 
-            changes.push({
-                start: node.range[0],
-                end: node.range[1],
-                str: move.name,
-            });
+            if (node.alterop) {
+                // node has no range because it is the result of another alter operation
+                let existingOp = null;
+                for (let i = 0; i < changes.length; i++) {
+                    const op = changes[i];
+                    if (op.node === node) {
+                        existingOp = op;
+                        break;
+                    }
+                }
+                assert(existingOp);
+
+                // modify op
+                existingOp.str = move.name;
+            } else {
+                changes.push({
+                    start: node.range[0],
+                    end: node.range[1],
+                    str: move.name,
+                });
+            }
         }
     }
 
@@ -336,8 +352,6 @@ function varify(ast, stats, allIdentifiers) {
     ast.$scope.traverse({pre: function(scope) {
         delete scope.moves;
     }});
-
-    return changes;
 }
 
 
@@ -434,10 +448,18 @@ function detectLoopClosures(node) {
     }
 }
 
-function transformLoops(root) {
-    // TODO *Work in progress*
-    // TODO support ForIn, While, DoWhile
-    const ops = [];
+function transformLoops(root, ops) {
+    function insertOp(pos, str, node) {
+        const op = {
+            start: pos,
+            end: pos,
+            str: str,
+        }
+        if (node) {
+            op.node = node;
+        }
+        ops.push(op);
+    }
 
     traverse(root, {pre: function(node) {
         if (!node.$iify) {
@@ -447,18 +469,12 @@ function transformLoops(root) {
         const insertHead = node.body.range[0] + 1; // just after body {
         const insertFoot = node.body.range[1] - 1; // just before body }
 
-        ops.push({
-            start: insertHead,
-            end: insertHead,
-            str: "(function(){",
-        });
-        ops.push({
-            start: insertFoot,
-            end: insertFoot,
-            str: "}).call(this);",
-        })
+        const forInName = (node.type === "ForInStatement" && node.left.declarations[0].id.name);;
+        const iifeHead = fmt("(function({0}){", forInName ? forInName : "");
+        const iifeTail = fmt("}).call(this{0});", forInName ? ", " + forInName : "");
 
-        const iifeFragment = esprima("(function(){}).call(this)");
+        // modify AST
+        const iifeFragment = esprima.parse(iifeHead + iifeTail);
         const iifeExpressionStatement = iifeFragment.body[0];
 
         const forBlockStatement = node.body;
@@ -468,9 +484,23 @@ function transformLoops(root) {
         forBlockStatement.body = [iifeExpressionStatement];
         const iifeBlockStatement = iifeExpressionStatement.expression.callee.object.body;
         iifeBlockStatement.body = oldForBlockStatementBody;
-    }});
 
-    return ops;
+        // create ops
+        insertOp(insertHead, iifeHead);
+
+        if (forInName) {
+            insertOp(insertFoot, "}).call(this, ");
+
+            const args = iifeExpressionStatement.expression.arguments;
+            const iifeArgumentIdentifier = args[1];
+            iifeArgumentIdentifier.alterop = true;
+            insertOp(insertFoot, forInName, iifeArgumentIdentifier);
+
+            insertOp(insertFoot, ");");
+        } else {
+            insertOp(insertFoot, iifeTail);
+        }
+    }});
 }
 
 function detectConstAssignment(node) {
@@ -495,7 +525,7 @@ function detectConstantLets(ast) {
     ast.$scope.detectUnmodifiedLets();
 }
 
-function setupScopeAndReferences(root) {
+function setupScopeAndReferences(root, opts) {
     // setup scopes
     traverse(root, {pre: createScopes});
     const topScope = createTopScope(root.$scope, options.environments, options.globals);
@@ -509,7 +539,7 @@ function setupScopeAndReferences(root) {
 
     // setup node.$refToScope, check for errors.
     // also collects all referenced names to allIdentifiers
-    setupReferences(root, allIdentifiers);
+    setupReferences(root, allIdentifiers, opts);
     return allIdentifiers;
 }
 
@@ -537,18 +567,15 @@ function run(src, config) {
     // TODO detect unused variables (never read)
     error.reset();
 
-    let allIdentifiers = setupScopeAndReferences(ast);
+    let allIdentifiers = setupScopeAndReferences(ast, {});
 
     // static analysis passes
     traverse(ast, {pre: detectLoopClosures});
     traverse(ast, {pre: detectConstAssignment});
     //detectConstantLets(ast);
 
-    const loopChanges = transformLoops(ast);
-    if (loopChanges.length > 0) {
-        cleanupTree(ast);
-        allIdentifiers = setupScopeAndReferences(ast);
-    }
+    const changes = [];
+    transformLoops(ast, changes);
 
     //ast.$scope.print(); process.exit(-1);
 
@@ -558,11 +585,17 @@ function run(src, config) {
         };
     }
 
+    if (changes.length > 0) {
+        cleanupTree(ast);
+        allIdentifiers = setupScopeAndReferences(ast, {analyze: false});
+    }
+    assert(error.errors.length === 0);
+
     // change constlet declarations to var, renamed if needed
     // varify modifies the scopes and AST accordingly and
     // returns a list of change fragments (to use with alter)
     const stats = new Stats();
-    const changes = loopChanges.concat(varify(ast, stats, allIdentifiers));
+    varify(ast, stats, allIdentifiers, changes);
 
     if (options.ast) {
         // return the modified AST instead of src code
