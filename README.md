@@ -130,6 +130,8 @@ res object:
 
 
 ## Compatibility
+*TODO describe IIFE support for upcoming defs release. The text below is outdated.*
+
 `defs.js` strives to transpile your program as true to the ES6 block scope semantics as
 possible, while being as maximally non-intrusive as possible. The only textual
 differences you'll find between your original and transpiled program is that the latter
