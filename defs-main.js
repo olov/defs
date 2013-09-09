@@ -474,7 +474,7 @@ function transformLoops(root, ops) {
         const iifeTail = fmt("}).call(this{0});", forInName ? ", " + forInName : "");
 
         // modify AST
-        const iifeFragment = esprima.parse(iifeHead + iifeTail);
+        const iifeFragment = esprima(iifeHead + iifeTail);
         const iifeExpressionStatement = iifeFragment.body[0];
 
         const forBlockStatement = node.body;

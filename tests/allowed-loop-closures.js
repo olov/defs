@@ -64,11 +64,13 @@ while (true) {
     }
 })();
 
-// For-In (TODO fix fail)
+// For-In
 for (let x in [0,1,2]) {
     arr.push(function() { return x; });
 }
-// TODO block-less for-in?
+
+// Block-less For-In
+//for (let x in [0,1,2]) arr.push(function() { return x; });
 
 // While
 while (true) {
