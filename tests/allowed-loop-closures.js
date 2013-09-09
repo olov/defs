@@ -31,6 +31,11 @@ for (let x = 0; x < 3; x++) {
 
 // can be transformed (added IIFE)
 for (let x = 0; x < 3; x++) {
+    let y = x, z = arr.push(function() { return y; });
+}
+
+// can be transformed (added IIFE)
+for (let x = 0; x < 3; x++) {
     let x = 1;
     arr.push(function() { return x; });
 }
@@ -70,7 +75,10 @@ for (let x in [0,1,2]) {
 }
 
 // Block-less For-In
-//for (let x in [0,1,2]) arr.push(function() { return x; });
+for (let x in [0,1,2]) arr.push(function() { return x; });/*with semicolon*/
+for (let x in [0,1,2]) arr.push(function() { return x; })/*no semicolon*/
+
+null; // previous semicolon-less for statement's range ends just before 'n' in 'null'
 
 // While
 while (true) {

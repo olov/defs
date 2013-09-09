@@ -423,7 +423,7 @@ function detectLoopClosures(node) {
                 // not ok (there's a function between the reference and definition)
                 // may be transformable via IIFE
 
-                if (!generateIIFE || !isLoop(loopNode) || loopNode.body.type !== "BlockStatement") {
+                if (!generateIIFE || !isLoop(loopNode)) {
                     return error(getline(node), "can't transform closure. {0} is defined outside closure, inside loop", node.name);
                 }
 
@@ -465,9 +465,15 @@ function transformLoops(root, ops) {
         if (!node.$iify) {
             return;
         }
-        assert(node.body.type === "BlockStatement"); // for now
-        const insertHead = node.body.range[0] + 1; // just after body {
-        const insertFoot = node.body.range[1] - 1; // just before body }
+
+        const hasBlock = (node.body.type === "BlockStatement");
+
+        const insertHead = (hasBlock ?
+            node.body.range[0] + 1 : // just after body {
+            node.body.range[0]); // just before existing expression
+        const insertFoot = (hasBlock ?
+            node.body.range[1] - 1 : // just before body }
+            node.body.range[1]);  // just after existing expression
 
         const forInName = (node.type === "ForInStatement" && node.left.declarations[0].id.name);;
         const iifeHead = fmt("(function({0}){", forInName ? forInName : "");
@@ -476,14 +482,18 @@ function transformLoops(root, ops) {
         // modify AST
         const iifeFragment = esprima(iifeHead + iifeTail);
         const iifeExpressionStatement = iifeFragment.body[0];
-
-        const forBlockStatement = node.body;
-        assert(is.array(forBlockStatement.body));
-        const oldForBlockStatementBody = forBlockStatement.body;
-        assert(is.array(forBlockStatement.body));
-        forBlockStatement.body = [iifeExpressionStatement];
         const iifeBlockStatement = iifeExpressionStatement.expression.callee.object.body;
-        iifeBlockStatement.body = oldForBlockStatementBody;
+
+        if (hasBlock) {
+            const forBlockStatement = node.body;
+            const tmp = forBlockStatement.body;
+            forBlockStatement.body = [iifeExpressionStatement];
+            iifeBlockStatement.body = tmp;
+        } else {
+            const tmp = node.body;
+            node.body = iifeExpressionStatement;
+            iifeBlockStatement.body[0] = tmp;
+        }
 
         // create ops
         insertOp(insertHead, iifeHead);

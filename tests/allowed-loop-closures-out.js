@@ -31,6 +31,11 @@ for (var x$3 = 0; x$3 < 3; x$3++) {(function(){
 
 // can be transformed (added IIFE)
 for (var x$4 = 0; x$4 < 3; x$4++) {(function(){
+    var y = x$4, z = arr.push(function() { return y; });
+}).call(this);}
+
+// can be transformed (added IIFE)
+for (var x$5 = 0; x$5 < 3; x$5++) {(function(){
     var x = 1;
     arr.push(function() { return x; });
 }).call(this);}
@@ -65,12 +70,15 @@ while (true) {
 })();
 
 // For-In
-for (var x$5 in [0,1,2]) {(function(x){
+for (var x$6 in [0,1,2]) {(function(x){
     arr.push(function() { return x; });
-}).call(this, x$5);}
+}).call(this, x$6);}
 
 // Block-less For-In
-//for (let x in [0,1,2]) arr.push(function() { return x; });
+for (var x$7 in [0,1,2]) (function(x){arr.push(function() { return x; });}).call(this, x$7);/*with semicolon*/
+for (var x$8 in [0,1,2]) (function(x){arr.push(function() { return x; })/*no semicolon*/
+
+}).call(this, x$8);null; // previous semicolon-less for statement's range ends just before 'n' in 'null'
 
 // While
 while (true) {(function(){
