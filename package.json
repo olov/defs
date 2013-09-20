@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "alter": "~0.2.0",
+    "breakable": "~0.1.0",
     "ast-traverse": "~0.1.0",
     "simple-fmt": "~0.1.0",
     "simple-is": "~0.2.0",
