@@ -8,6 +8,7 @@ const stringmap = require("stringmap");
 const stringset = require("stringset");
 const alter = require("alter");
 const traverse = require("ast-traverse");
+const breakable = require("./breakable");
 const Scope = require("./scope");
 const error = require("./error");
 const options = require("./options");
@@ -357,7 +358,7 @@ function varify(ast, stats, allIdentifiers, changes) {
 
 function detectLoopClosures(node) {
     function detectIifyBodyBlockers(body, node) {
-        try {
+        return breakable(function(brk) {
             traverse(body, {pre: function(n) {
                 // if we hit an inner function of the loop body, don't traverse further
                 if (isFunction(n)) {
@@ -379,13 +380,11 @@ function detectLoopClosures(node) {
                     err = false;
                 }
                 if (err) {
-                    throw 0; // break traversal
+                    brk(true); // break traversal
                 }
             }});
-        } catch(e) {
-            return true;
-        }
-        return false;
+            return false;
+        });
     }
 
     // forbidden pattern:
