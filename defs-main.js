@@ -373,6 +373,8 @@ function detectLoopClosures(node) {
                     error(getline(node), "can't transform loop-closure due to use of return at line {1}. {0} is defined outside closure, inside loop", node.name, getline(n));
                 } else if (n.type === "Identifier" && n.name === "arguments") {
                     error(getline(node), "can't transform loop-closure due to use of arguments at line {1}. {0} is defined outside closure, inside loop", node.name, getline(n));
+                } else if (n.type === "VariableDeclaration" && n.kind === "var") {
+                    error(getline(node), "can't transform loop-closure due to use of var at line {1}. {0} is defined outside closure, inside loop", node.name, getline(n));
                 } else {
                     err = false;
                 }

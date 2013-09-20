@@ -55,6 +55,13 @@ for (let x = 0; x < 3; x++) {
     arr.push(function() { return y; });
 }
 
+// continue is not allowed inside the loop body because the IIFE would break it
+for (let x = 0; x < 3; x++) {
+    let y = x;
+    var z = 1;
+    arr.push(function() { return y; });
+}
+
 // TODO block-less loops (is that even applicable?)
 
 arr.forEach(function(f) {
