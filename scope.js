@@ -128,7 +128,7 @@ Scope.prototype.hasOwn = function(name) {
 };
 
 Scope.prototype.remove = function(name) {
-    return this.decls.delete(name);
+    return this.decls.remove(name);
 };
 
 Scope.prototype.doesPropagate = function(name) {
