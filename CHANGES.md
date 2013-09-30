@@ -1,3 +1,8 @@
+## v0.5.0 2013-09-30
+ * Loop closure IIFE transformation support
+ * Search for defs-config.json upwards in filesystem
+ * Improved error messages
+
 ## v0.4.3 2013-09-05
  * Improved loop closure detection as to remove false positives
  * Improved wrapper shell script (symlink handling)
