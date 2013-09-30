@@ -135,7 +135,7 @@ res object:
 
 ## Compatibility
 `defs.js` strives to transpile your program as true to ES6 block scope semantics as
-possible, while being as maximally non-intrusive as possible.
+possible while being as maximally non-intrusive as possible.
 
 It can optionally transform loop closures via IIFE's (when possible), if you include
 `"loopClosures": "iife"` in your `defs-config.json`. More info in

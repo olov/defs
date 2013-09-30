@@ -12,14 +12,14 @@ for (let x = 0; x < 10; x++) {
 }
 ```
 
-defs will with default options give you an error:
+defs with default options gives you an error:
 
     line 4: loop-variable y is captured by a loop-closure. Tried "loopClosures": "iife" in defs-config.json?
 
 This is because With ES6 semantics `y` is bound fresh per loop iteration, so each closure captures a separate
 instance of `y`, unlike if `y` would have been a `var`.
 
-You can now either choose to rewrite it manually, like usually in a pre-ES6 world, using an IIFE or
+You can now either choose to rewrite it manually (in usual pre-ES6 style), with an IIFE or
 bind or similar. For example:
 
 ```javascript
@@ -32,7 +32,7 @@ for (let x = 0; x < 10; x++) {
 ```
 
 And that runs just fine and defs stops complaining. Alternatively, you can ask defs to
-create the IIFE for you, by adding `"loopClosures": "iife"` to your `defs-config.json`.
+create the IIFE for you by adding `"loopClosures": "iife"` to your `defs-config.json`.
 Run on the original example, defs transpiles that without complaining to:
 
 ```javascript
@@ -50,4 +50,4 @@ the loop body semantics). If so either rewrite the loop body so it doesn't use a
 insert an IIFE manually (knowing what you're doing).
 
 defs does not support transforming loops containing loop closures in any other way than
-with IIFE, including try-catch statements.
+with IIFE's, including try-catch statements.
