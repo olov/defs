@@ -356,7 +356,9 @@ function varify(ast, stats, allIdentifiers, changes) {
 }
 
 
-function detectLoopClosures(node) {
+function detectLoopClosures(ast) {
+    traverse(ast, {pre: visit});
+
     function detectIifyBodyBlockers(body, node) {
         return breakable(function(brk) {
             traverse(body, {pre: function(n) {
@@ -366,16 +368,17 @@ function detectLoopClosures(node) {
                 }
 
                 let err = true; // reset to false in else-statement below
+                const msg = "loop-variable {0} is captured by a loop-closure that can't be transformed due to use of {1} at line {2}";
                 if (n.type === "BreakStatement") {
-                    error(getline(node), "can't transform loop-closure due to use of break at line {1}. {0} is defined outside closure, inside loop", node.name, getline(n));
+                    error(getline(node), msg, node.name, "break", getline(n));
                 } else if (n.type === "ContinueStatement") {
-                    error(getline(node), "can't transform loop-closure due to use of continue at line {1}. {0} is defined outside closure, inside loop", node.name, getline(n));
+                    error(getline(node), msg, node.name, "continue", getline(n));
                 } else if (n.type === "ReturnStatement") {
-                    error(getline(node), "can't transform loop-closure due to use of return at line {1}. {0} is defined outside closure, inside loop", node.name, getline(n));
+                    error(getline(node), msg, node.name, "return", getline(n));
                 } else if (n.type === "Identifier" && n.name === "arguments") {
-                    error(getline(node), "can't transform loop-closure due to use of arguments at line {1}. {0} is defined outside closure, inside loop", node.name, getline(n));
+                    error(getline(node), msg, node.name, "arguments", getline(n));
                 } else if (n.type === "VariableDeclaration" && n.kind === "var") {
-                    error(getline(node), "can't transform loop-closure due to use of var at line {1}. {0} is defined outside closure, inside loop", node.name, getline(n));
+                    error(getline(node), msg, node.name, "var", getline(n));
                 } else {
                     err = false;
                 }
@@ -387,69 +390,74 @@ function detectLoopClosures(node) {
         });
     }
 
-    // forbidden pattern:
-    // <any>* <loop> <non-fn>* <constlet-def> <any>* <fn> <any>* <constlet-ref>
-    var loopNode = null;
-    if (isReference(node) && node.$refToScope && isConstLet(node.$refToScope.getKind(node.name))) {
-        // traverse nodes up towards root from constlet-def
-        // if we hit a function (before a loop) - ok!
-        // if we hit a loop - maybe-ouch
-        // if we reach root - ok!
-        for (let n = node.$refToScope.node; ; ) {
-            if (isFunction(n)) {
-                // we're ok (function-local)
-                return;
-            } else if (isLoop(n)) {
-                loopNode = n;
-                // maybe not ok (between loop and function)
-                break;
-            }
-            n = n.$parent;
-            if (!n) {
-                // ok (reached root)
-                return;
-            }
-        }
-
-        // traverse scopes from reference-scope up towards definition-scope
-        // if we hit a function, ouch!
-        const defScope = node.$refToScope;
-        const generateIIFE = true; // TODO get from options
-
-        for (let s = node.$scope; s; s = s.parent) {
-            if (s === defScope) {
-                // we're ok
-                return;
-            } else if (isFunction(s.node)) {
-                // not ok (there's a function between the reference and definition)
-                // may be transformable via IIFE
-
-                if (!generateIIFE || !isLoop(loopNode)) {
-                    return error(getline(node), "can't transform closure. {0} is defined outside closure, inside loop", node.name);
+    function visit(node) {
+        // forbidden pattern:
+        // <any>* <loop> <non-fn>* <constlet-def> <any>* <fn> <any>* <constlet-ref>
+        var loopNode = null;
+        if (isReference(node) && node.$refToScope && isConstLet(node.$refToScope.getKind(node.name))) {
+            // traverse nodes up towards root from constlet-def
+            // if we hit a function (before a loop) - ok!
+            // if we hit a loop - maybe-ouch
+            // if we reach root - ok!
+            for (let n = node.$refToScope.node; ; ) {
+                if (isFunction(n)) {
+                    // we're ok (function-local)
+                    return;
+                } else if (isLoop(n)) {
+                    loopNode = n;
+                    // maybe not ok (between loop and function)
+                    break;
                 }
-
-                // here be dragons
-                // for (let x = ..; .. ; ..) { (function(){x})() } is forbidden because of current
-                // spec and VM status
-                if (loopNode.type === "ForStatement" && defScope.node === loopNode) {
-                    const declarationNode = defScope.getNode(node.name);
-                    return error(getline(declarationNode), "Not yet specced ES6 feature. {0} is declared in for-loop header and then captured in loop closure", declarationNode.name);
-                }
-
-                // speak now or forever hold your peace
-                if (detectIifyBodyBlockers(loopNode.body, node)) {
-                    // error already generated
+                n = n.$parent;
+                if (!n) {
+                    // ok (reached root)
                     return;
                 }
+            }
 
-                // mark loop for IIFE-insertion
-                loopNode.$iify = true;
+            assert(isLoop(loopNode));
+
+            // traverse scopes from reference-scope up towards definition-scope
+            // if we hit a function, ouch!
+            const defScope = node.$refToScope;
+            const generateIIFE = (options.loopClosures === "iife");
+
+            for (let s = node.$scope; s; s = s.parent) {
+                if (s === defScope) {
+                    // we're ok
+                    return;
+                } else if (isFunction(s.node)) {
+                    // not ok (there's a function between the reference and definition)
+                    // may be transformable via IIFE
+
+                    if (!generateIIFE) {
+                        const msg = "loop-variable {0} is captured by a loop-closure. Tried \"loopClosures\": \"iife\" in defs-config.json?";
+                        return error(getline(node), msg, node.name);
+                    }
+
+                    // here be dragons
+                    // for (let x = ..; .. ; ..) { (function(){x})() } is forbidden because of current
+                    // spec and VM status
+                    if (loopNode.type === "ForStatement" && defScope.node === loopNode) {
+                        const declarationNode = defScope.getNode(node.name);
+                        return error(getline(declarationNode), "Not yet specced ES6 feature. {0} is declared in for-loop header and then captured in loop closure", declarationNode.name);
+                    }
+
+                    // speak now or forever hold your peace
+                    if (detectIifyBodyBlockers(loopNode.body, node)) {
+                        // error already generated
+                        return;
+                    }
+
+                    // mark loop for IIFE-insertion
+                    loopNode.$iify = true;
+                }
             }
         }
     }
 }
 
-function transformLoops(root, ops) {
+function transformLoopClosures(root, ops) {
     function insertOp(pos, str, node) {
         const op = {
             start: pos,
@@ -514,13 +522,15 @@ function transformLoops(root, ops) {
     }});
 }
 
-function detectConstAssignment(node) {
-    if (isLvalue(node)) {
-        const scope = node.$scope.lookup(node.name);
-        if (scope && scope.getKind(node.name) === "const") {
-            error(getline(node), "can't assign to const variable {0}", node.name);
+function detectConstAssignment(ast) {
+    traverse(ast, {pre: function(node) {
+        if (isLvalue(node)) {
+            const scope = node.$scope.lookup(node.name);
+            if (scope && scope.getKind(node.name) === "const") {
+                error(getline(node), "can't assign to const variable {0}", node.name);
+            }
         }
-    }
+    }});
 }
 
 function detectConstantLets(ast) {
@@ -581,12 +591,12 @@ function run(src, config) {
     let allIdentifiers = setupScopeAndReferences(ast, {});
 
     // static analysis passes
-    traverse(ast, {pre: detectLoopClosures});
-    traverse(ast, {pre: detectConstAssignment});
+    detectLoopClosures(ast);
+    detectConstAssignment(ast);
     //detectConstantLets(ast);
 
     const changes = [];
-    transformLoops(ast, changes);
+    transformLoopClosures(ast, changes);
 
     //ast.$scope.print(); process.exit(-1);
 
