@@ -18,9 +18,7 @@ if (!fs.existsSync(filename)) {
 
 const src = String(fs.readFileSync(filename));
 
-const config = tryor(function() {
-    return JSON.parse(String(fs.readFileSync("defs-config.json")));
-}, {});
+const config = findAndReadConfig();
 
 const ret = defs(src, config);
 if (ret.errors) {
@@ -38,4 +36,28 @@ if (ret.ast) {
 }
 if (ret.src) {
     process.stdout.write(ret.src);
+}
+
+function findAndReadConfig() {
+    let path = "";
+    let filename = "defs-config.json";
+    let filenamePath = null;
+
+    while (fs.existsSync(path || ".")) {
+        filenamePath = path + filename;
+        if (fs.existsSync(filenamePath)) {
+            const config = tryor(function() {
+                return JSON.parse(String(fs.readFileSync(filenamePath)));
+            }, null);
+            if (config === null) {
+                console.error("error: bad JSON in %s", filenamePath);
+                process.exit(-1);
+            }
+            return config;
+        }
+
+        path = "../" + path;
+    }
+
+    return {};
 }
