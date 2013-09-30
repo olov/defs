@@ -48,6 +48,7 @@ Example `defs-config.json`:
             "my": false,
             "hat": true
         },
+        "loopClosures": "iife",
         "disallowVars": false,
         "disallowDuplicated": true,
         "disallowUnknownReferences": true
@@ -59,6 +60,9 @@ writable (`true`) or read-only (`false`), just like `jshint`.
 `environments` lets you import a set of pre-defined globals, here `node` and
 `browser`. These default environments are borrowed from `jshint` (see
 [jshint_globals/vars.js](https://github.com/olov/defs/blob/master/jshint_globals/vars.js)).
+
+`loopClosures` (defaults to `false`) can be set to "iife" to enable transformation
+of loop-closures via immediately-invoked function expressions.
 
 `disallowVars` (defaults to `false`) can be enabled to make
 usage of `var` an error.
@@ -130,63 +134,11 @@ res object:
 
 
 ## Compatibility
-*TODO describe IIFE support for upcoming defs release. The text below is outdated.*
+`defs.js` strives to transpile your program as true to ES6 block scope semantics as
+possible, while being as maximally non-intrusive as possible.
 
-`defs.js` strives to transpile your program as true to the ES6 block scope semantics as
-possible, while being as maximally non-intrusive as possible. The only textual
-differences you'll find between your original and transpiled program is that the latter
-uses `var` and occasional variable renames.
+It can optionally transform loop closures via IIFE's (when possible), if you include
+`"loopClosures": "iife"` in your `defs-config.json`. More info in
+[loop-closures.md](loop-closures.md).
 
-
-### Loop closures limitation
-`defs.js` won't transpile a closure-that-captures-a-block-scoped-variable-inside-a-loop, such
-as the following example:
-
-```javascript
-for (let x = 0; x < 10; x++) {
-    let y = x;
-    arr.push(function() { return y; });
-}
-```
-
-With ES6 semantics `y` is bound fresh per loop iteration, so each closure captures a separate
-instance of `y`, unlike if `y` would have been a `var`. [Actually, even `x` is bound per
-iteration, but v8 (so node) has an
-[open bug](https://code.google.com/p/v8/issues/detail?id=2560) for that].
-
-To transpile this example, an IIFE or `try-catch` must be inserted, which isn't maximally
-non-intrusive. `defs.js` will detect this case and spit out an error instead, like so:
-
-    line 3: can't transform closure. y is defined outside closure, inside loop
-
-You need to manually handle this the way we've always done pre-`ES6`,
-for instance like so:
-
-```javascript
-for (let x = 0; x < 10; x++) {
-    (function(y) {
-        arr.push(function() { return y; });
-    })(x);
-}
-```
-
-I'm interested in feedback on this based on real-world usage of `defs.js`.
-
-
-### Referenced (inside closure) before declaration
-`defs.js` detects the vast majority of cases where a variable is referenced prior to
-its declaration. The one case it cannot detect is the following:
-
-```javascript
-function printx() { console.log(x); }
-printx(); // illegal
-let x = 1;
-printx(); // legal
-```
-
-The first call to `printx` is not legal because `x` hasn't been initialized at that point
-of *time*, which is impossible to catch reliably with statical analysis.
-`v8 --harmony` will detect and error on this via run-time checking. `defs.js` will
-happily transpile this example (`let` => `var` and that's it), and the transpiled code
-will print `undefined` on the first call to `printx`. This difference should be a very
-minor problem in practice.
+See [semantic-differences.md](semantic-differences.md) for other minor differences.
