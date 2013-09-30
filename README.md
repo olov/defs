@@ -37,7 +37,7 @@ See [CHANGES.md](CHANGES.md).
 
 ## Configuration
 `defs` looks for a `defs-config.json` configuration file in your current
-directory. It will search for it in parent directories soon as you'd expect.
+directory. If not found there, it searches parent directories until it hits `/`.
 
 Example `defs-config.json`:
 
