@@ -79,6 +79,9 @@ unknown global variables.
 `stats` (defaults to `false`) prints const/let statistics and renames
 (experimental).
 
+`parse` (defaults to `null`) lets you provide a custom parse function if you
+use defs as an API. By default it will use `require("esprima").parse`.
+
 
 ## Example
 
