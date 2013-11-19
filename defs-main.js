@@ -581,7 +581,14 @@ function run(src, config) {
         options[key] = config[key];
     }
 
-    const ast = (is.object(src) ? src : options.parse(src, {
+    const gotAST = is.object(src);
+    if (gotAST && !options.ast) {
+        return {
+            errors: ["Can't produce string output when input is an AST. Did you forget to set options.ast = true?"],
+        }
+    }
+
+    const ast = (gotAST ? src : options.parse(src, {
         loc: true,
         range: true,
     }));

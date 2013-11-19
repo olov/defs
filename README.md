@@ -128,8 +128,8 @@ assert(res.src === "var x = 1");
 
 // you can also pass an AST (with loc and range) instead of a string to defs
 const ast = require("esprima").parse(src, {loc: true, range: true});
-const res = defs(ast, options);
-assert(res.src === "var x = 1");
+const res = defs(ast, {ast: true}); // AST-in, AST-out
+// inspect res.ast
 ```
 
 res object:
