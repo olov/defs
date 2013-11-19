@@ -1,6 +1,5 @@
 "use strict";
 
-const esprima = require("esprima").parse;
 const assert = require("assert");
 const is = require("simple-is");
 const fmt = require("simple-fmt");
@@ -457,7 +456,7 @@ function detectLoopClosures(ast) {
     }
 }
 
-function transformLoopClosures(root, ops) {
+function transformLoopClosures(root, ops, options) {
     function insertOp(pos, str, node) {
         const op = {
             start: pos,
@@ -489,7 +488,7 @@ function transformLoopClosures(root, ops) {
         const iifeTail = fmt("}).call(this{0});", forInName ? ", " + forInName : "");
 
         // modify AST
-        const iifeFragment = esprima(iifeHead + iifeTail);
+        const iifeFragment = options.parse(iifeHead + iifeTail);
         const iifeExpressionStatement = iifeFragment.body[0];
         const iifeBlockStatement = iifeExpressionStatement.expression.callee.object.body;
 
@@ -580,7 +579,7 @@ function run(src, config) {
         options[key] = config[key];
     }
 
-    const ast = esprima(src, {
+    const ast = options.parse(src, {
         loc: true,
         range: true,
     });
@@ -596,7 +595,7 @@ function run(src, config) {
     //detectConstantLets(ast);
 
     const changes = [];
-    transformLoopClosures(ast, changes);
+    transformLoopClosures(ast, changes, options);
 
     //ast.$scope.print(); process.exit(-1);
 
