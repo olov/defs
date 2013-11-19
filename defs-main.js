@@ -374,6 +374,8 @@ function detectLoopClosures(ast) {
                     error(getline(node), msg, node.name, "continue", getline(n));
                 } else if (n.type === "ReturnStatement") {
                     error(getline(node), msg, node.name, "return", getline(n));
+                } else if (n.type === "YieldExpression") {
+                    error(getline(node), msg, node.name, "yield", getline(n));
                 } else if (n.type === "Identifier" && n.name === "arguments") {
                     error(getline(node), msg, node.name, "arguments", getline(n));
                 } else if (n.type === "VariableDeclaration" && n.kind === "var") {
@@ -579,10 +581,10 @@ function run(src, config) {
         options[key] = config[key];
     }
 
-    const ast = options.parse(src, {
+    const ast = (is.object(src) ? src : options.parse(src, {
         loc: true,
         range: true,
-    });
+    }));
 
     // TODO detect unused variables (never read)
     error.reset();

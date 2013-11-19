@@ -119,7 +119,13 @@ fn();
 ```javascript
 const defs = require("defs");
 const options = {};
-const res = defs("const x = 1", options);
+const src = "const x = 1";
+const res = defs(src, options);
+assert(res.src === "var x = 1");
+
+// you can also pass an AST (with loc and range) instead of a string to defs
+const ast = require("esprima").parse(src, {loc: true, range: true});
+const res = defs(ast, options);
 assert(res.src === "var x = 1");
 ```
 
