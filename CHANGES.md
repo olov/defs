@@ -1,3 +1,8 @@
+## v0.6.0 2013-12-01
+ * Accept a custom parse function
+ * Accept AST input when used as a library
+ * Bugfix AST modification (issue #19)
+
 ## v0.5.0 2013-09-30
  * Loop closure IIFE transformation support
  * Search for defs-config.json upwards in filesystem
