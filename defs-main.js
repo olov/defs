@@ -306,6 +306,9 @@ function varify(ast, stats, allIdentifiers, changes) {
                     });
                 }
             });
+
+            // ast change const|let => var
+            node.kind = "var";
         }
     }
 
