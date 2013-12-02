@@ -591,10 +591,18 @@ function run(src, config) {
         }
     }
 
-    const ast = (gotAST ? src : options.parse(src, {
-        loc: true,
-        range: true,
-    }));
+    let parsed;
+    try {
+        parsed = options.parse(src, {
+            loc: true,
+            range: true,
+        });
+    } catch (e) {
+        return {
+            errors: [fmt("line {0} column {1}: Error during input file parsing\n{2}\n{3}", e.lineNumber, e.column, src.split("\n")[e.lineNumber - 1], fmt.repeat(" ", e.column - 1) + "^")],
+        };
+    }
+    const ast = (gotAST ? src : parsed);
 
     // TODO detect unused variables (never read)
     error.reset();
