@@ -44,7 +44,7 @@ for (var x = 0; x < 10; x++) {(function(){
 ```
 
 Not all loop closures can be transpiled into IIFE's. If the loop body (which contains the
-loop closure) also contains a `return`, `break`, `continue`, `arguments` or `var`, then
+loop closure) also contains a `return`, `yield`, `break`, `continue`, `arguments` or `var`, then
 defs will detect that and give you an error (because an IIFE would likely change
 the loop body semantics). If so either rewrite the loop body so it doesn't use any of these or
 insert an IIFE manually (knowing what you're doing).
