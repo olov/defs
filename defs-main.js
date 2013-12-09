@@ -584,25 +584,46 @@ function run(src, config) {
         options[key] = config[key];
     }
 
-    const gotAST = is.object(src);
-    if (gotAST && !options.ast) {
-        return {
-            errors: ["Can't produce string output when input is an AST. Did you forget to set options.ast = true?"],
-        }
-    }
-
     let parsed;
-    try {
-        parsed = options.parse(src, {
-            loc: true,
-            range: true,
-        });
-    } catch (e) {
+
+    if (is.object(src)) {
+        if (!options.ast) {
+            return {
+                errors: [
+                    "Can't produce string output when input is an AST. " +
+                    "Did you forget to set options.ast = true?"
+                ],
+            };
+        }
+
+        // Received an AST object as src, so no need to parse it.
+        parsed = src;
+
+    } else if (is.string(src)) {
+        try {
+            parsed = options.parse(src, {
+                loc: true,
+                range: true,
+            });
+        } catch (e) {
+            return {
+                errors: [
+                    fmt("line {0} column {1}: Error during input file parsing\n{2}\n{3}",
+                        e.lineNumber,
+                        e.column,
+                        src.split("\n")[e.lineNumber - 1],
+                        fmt.repeat(" ", e.column - 1) + "^")
+                ],
+            };
+        }
+
+    } else {
         return {
-            errors: [fmt("line {0} column {1}: Error during input file parsing\n{2}\n{3}", e.lineNumber, e.column, src.split("\n")[e.lineNumber - 1], fmt.repeat(" ", e.column - 1) + "^")],
+            errors: ["Input was neither an AST object nor a string."],
         };
     }
-    const ast = (gotAST ? src : parsed);
+
+    const ast = parsed;
 
     // TODO detect unused variables (never read)
     error.reset();
