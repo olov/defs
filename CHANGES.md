@@ -1,3 +1,6 @@
+## v0.6.1 2013-12-09
+ * Graceful error handling on malformed source input (issue #18)
+
 ## v0.6.0 2013-12-01
  * Accept a custom parse function
  * Accept AST input when used as a library
