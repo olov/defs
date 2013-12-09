@@ -1,3 +1,6 @@
+## v0.6.2 2013-12-09
+ * Fix regenerator breakage due to input handling (pr #22)
+
 ## v0.6.1 2013-12-09
  * Graceful error handling on malformed source input (issue #18)
 
