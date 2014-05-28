@@ -7,7 +7,7 @@ for (var x = 0; x < 10; x++) {
 }
 
 // can be transformed (common manual work-around)
-for (var x$0 in [0,1,2]) {
+for (var x$0 = 0; x$0 < 3; x$0++) {
     arr.push((function(x) { return function() { return x; } })(x$0));
 }
 
@@ -79,6 +79,17 @@ for (var x$7 in [0,1,2]) (function(x){arr.push(function() { return x; });}).call
 for (var x$8 in [0,1,2]) (function(x){arr.push(function() { return x; })/*no semicolon*/
 
 }).call(this, x$8);null; // previous semicolon-less for statement's range ends just before 'n' in 'null'
+
+// For-Of
+for (var x$9 of [0,1,2]) {(function(x){
+    arr.push(function() { return x; });
+}).call(this, x$9);}
+
+// Block-less For-Of
+for (var x$10 of [0,1,2]) (function(x){arr.push(function() { return x; });}).call(this, x$10);/*with semicolon*/
+for (var x$11 of [0,1,2]) (function(x){arr.push(function() { return x; })/*no semicolon*/
+
+}).call(this, x$11);null; // previous semicolon-less for statement's range ends just before 'n' in 'null'
 
 // While
 while (true) {(function(){

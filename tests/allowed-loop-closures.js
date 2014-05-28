@@ -7,7 +7,7 @@ for (var x = 0; x < 10; x++) {
 }
 
 // can be transformed (common manual work-around)
-for (let x in [0,1,2]) {
+for (let x = 0; x < 3; x++) {
     arr.push((function(x) { return function() { return x; } })(x));
 }
 
@@ -77,6 +77,17 @@ for (let x in [0,1,2]) {
 // Block-less For-In
 for (let x in [0,1,2]) arr.push(function() { return x; });/*with semicolon*/
 for (let x in [0,1,2]) arr.push(function() { return x; })/*no semicolon*/
+
+null; // previous semicolon-less for statement's range ends just before 'n' in 'null'
+
+// For-Of
+for (let x of [0,1,2]) {
+    arr.push(function() { return x; });
+}
+
+// Block-less For-Of
+for (let x of [0,1,2]) arr.push(function() { return x; });/*with semicolon*/
+for (let x of [0,1,2]) arr.push(function() { return x; })/*no semicolon*/
 
 null; // previous semicolon-less for statement's range ends just before 'n' in 'null'
 

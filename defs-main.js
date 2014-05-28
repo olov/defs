@@ -32,8 +32,12 @@ function isForWithConstLet(node) {
     return node.type === "ForStatement" && node.init && node.init.type === "VariableDeclaration" && isConstLet(node.init.kind);
 }
 
-function isForInWithConstLet(node) {
-    return node.type === "ForInStatement" && node.left.type === "VariableDeclaration" && isConstLet(node.left.kind);
+function isForInOfWithConstLet(node) {
+    return isForInOf(node) && node.left.type === "VariableDeclaration" && isConstLet(node.left.kind);
+}
+
+function isForInOf(node) {
+    return is.someof(node.type, ["ForInStatement", "ForOfStatement"]);
 }
 
 function isFunction(node) {
@@ -41,7 +45,7 @@ function isFunction(node) {
 }
 
 function isLoop(node) {
-    return is.someof(node.type, ["ForStatement", "ForInStatement", "WhileStatement", "DoWhileStatement"]);
+    return is.someof(node.type, ["ForStatement", "ForInStatement", "ForOfStatement", "WhileStatement", "DoWhileStatement"]);
 }
 
 function isReference(node) {
@@ -120,8 +124,8 @@ function createScopes(node, parent) {
             node.$scope.add(name, node.kind, declarator.id, declarator.range[1]);
         });
 
-    } else if (isForWithConstLet(node) || isForInWithConstLet(node)) {
-        // For(In) loop with const|let declaration is a scope, with declaration in it
+    } else if (isForWithConstLet(node) || isForInOfWithConstLet(node)) {
+        // For(In/Of) loop with const|let declaration is a scope, with declaration in it
         // There may be a block-scope under it
         node.$scope = new Scope({
             kind: "block",
@@ -485,7 +489,7 @@ function transformLoopClosures(root, ops, options) {
             node.body.range[1] - 1 : // just before body }
             node.body.range[1]);  // just after existing expression
 
-        const forInName = (node.type === "ForInStatement" && node.left.declarations[0].id.name);;
+        const forInName = (isForInOf(node) && node.left.declarations[0].id.name);;
         const iifeHead = fmt("(function({0}){", forInName ? forInName : "");
         const iifeTail = fmt("}).call(this{0});", forInName ? ", " + forInName : "");
 
