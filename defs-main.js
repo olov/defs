@@ -10,14 +10,11 @@ const traverse = require("ast-traverse");
 const breakable = require("breakable");
 const Scope = require("./scope");
 const error = require("./error");
+const getline = error.getline;
 const options = require("./options");
 const Stats = require("./stats");
 const jshint_vars = require("./jshint_globals/vars.js");
 
-
-function getline(node) {
-    return node.loc.start.line;
-}
 
 function isConstLet(kind) {
     return is.someof(kind, ["const", "let"]);

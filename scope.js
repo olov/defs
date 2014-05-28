@@ -6,6 +6,7 @@ const stringset = require("stringset");
 const is = require("simple-is");
 const fmt = require("simple-fmt");
 const error = require("./error");
+const getline = error.getline;
 const options = require("./options");
 
 function Scope(args) {
@@ -84,14 +85,14 @@ Scope.prototype.add = function(name, kind, node, referableFromPos) {
     if (is.someof(kind, ["fun", "param", "var"])) {
         while (scope.kind !== "hoist") {
             if (scope.decls.has(name) && isConstLet(scope.decls.get(name).kind)) { // could be caught
-                return error(node.loc.start.line, "{0} is already declared", name);
+                return error(getline(node), "{0} is already declared", name);
             }
             scope = scope.parent;
         }
     }
     // name exists in scope and either new or existing kind is const|let => error
     if (scope.decls.has(name) && (options.disallowDuplicated || isConstLet(scope.decls.get(name).kind) || isConstLet(kind))) {
-        return error(node.loc.start.line, "{0} is already declared", name);
+        return error(getline(node), "{0} is already declared", name);
     }
 
     const declaration = {
@@ -188,13 +189,13 @@ Scope.prototype.detectUnmodifiedLets = function() {
         if (scope !== outmost) {
             scope.decls.keys().forEach(function(name) {
                 if (scope.getKind(name) === "let" && !scope.written.has(name)) {
-                    return error(scope.getNode(name).loc.start.line, "{0} is declared as let but never modified so could be const", name);
+                    return error(getline(scope.getNode(name)), "{0} is declared as let but never modified so could be const", name);
                 }
             });
         }
 
         scope.children.forEach(function(childScope) {
-            detect(childScope);;
+            detect(childScope);
         });
     }
     detect(this);

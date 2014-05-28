@@ -16,6 +16,13 @@ error.reset = function() {
     error.errors = [];
 };
 
+error.getline = function(node) {
+    if (node && node.loc && node.loc.start) {
+        return node.loc.start.line;
+    }
+    return -1;
+};
+
 error.reset();
 
 module.exports = error;
