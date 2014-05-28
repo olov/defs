@@ -9,17 +9,17 @@
   },
   "dependencies": {
     "alter": "~0.2.0",
-    "breakable": "~0.1.0",
+    "breakable": "~1.0.0",
     "ast-traverse": "~0.1.1",
     "simple-fmt": "~0.1.0",
     "simple-is": "~0.2.0",
     "stringmap": "~0.2.2",
     "stringset": "~0.2.1",
     "tryor": "~0.1.2",
-    "esprima": "~1.0.0"
+    "esprima": "git://github.com/ariya/esprima.git#harmony"
   },
   "devDependencies": {
-    "diff": "~1.0.7"
+    "diff": "~1.0.8"
   },
   "keywords": [
     "defs",
