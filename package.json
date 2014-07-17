@@ -16,7 +16,8 @@
     "stringmap": "~0.2.2",
     "stringset": "~0.2.1",
     "tryor": "~0.1.2",
-    "esprima": "git://github.com/ariya/esprima.git#harmony"
+    "esprima": "git://github.com/ariya/esprima.git#harmony",
+    "yargs": "~1.0.15"
   },
   "devDependencies": {
     "diff": "~1.0.8"
