@@ -1,3 +1,8 @@
+## v1.0.0 2014-07-18
+ * Use bleeding edge Esprima (harmony branch)
+ * Support ForOfStatement (issue #24)
+ * Added --config switch
+
 ## v0.6.2 2013-12-09
  * Fix regenerator breakage due to input handling (pr #22)
 
