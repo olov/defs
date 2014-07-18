@@ -9,15 +9,15 @@
   },
   "dependencies": {
     "alter": "~0.2.0",
-    "breakable": "~1.0.0",
     "ast-traverse": "~0.1.1",
+    "breakable": "~1.0.0",
+    "esprima": "git://github.com/ariya/esprima.git#harmony",
     "simple-fmt": "~0.1.0",
     "simple-is": "~0.2.0",
     "stringmap": "~0.2.2",
     "stringset": "~0.2.1",
     "tryor": "~0.1.2",
-    "esprima": "git://github.com/ariya/esprima.git#harmony",
-    "yargs": "~1.0.15"
+    "yargs": "~1.2.6"
   },
   "devDependencies": {
     "diff": "~1.0.8"
