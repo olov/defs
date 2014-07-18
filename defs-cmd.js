@@ -4,12 +4,15 @@ const fs = require("fs");
 const fmt = require("simple-fmt");
 const tryor = require("tryor");
 const defs = require("./defs-main");
+const version = require("./package.json").version;
 const yargs = require("yargs")
     .options("config", {});
 const argv = yargs.argv;
 
 if (!argv._.length) {
     const usage = [
+        "defs v" + version + "",
+        "",
         "Usage: defs OPTIONS <file>",
         "",
         "Options: ",

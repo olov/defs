@@ -11,6 +11,10 @@ do
 done
 
 cp defs es5/
+
+echo "hard-coding version"
+node --harmony inline-version.js
+
 cp -r ../jshint_globals es5/
 
 cd es5
