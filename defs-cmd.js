@@ -5,19 +5,23 @@ const fmt = require("simple-fmt");
 const tryor = require("tryor");
 const defs = require("./defs-main");
 const yargs = require("yargs")
-    .options('config', {
-        describe: "path to defs config",
-    });
+    .options("config", {});
 const argv = yargs.argv;
 
 if (!argv._.length) {
-    console.log("USAGE: defs [options] file.js");
+    const usage = [
+        "Usage: defs OPTIONS <file>",
+        "",
+        "Options: ",
+        "  --config  use specified defs-config.js instead of searching for it",
+    ].join("\n");
+    console.error(usage);
     process.exit(-1);
 }
 const filename = argv._[0];
 
 if (!fs.existsSync(filename)) {
-    console.log(fmt("error: file not found <{0}>", filename));
+    console.error("error: file not found <%s>", filename);
     process.exit(-1);
 }
 
@@ -45,7 +49,17 @@ if (ret.src) {
 
 function findAndReadConfig() {
     if (argv.config) {
-        return JSON.parse(String(fs.readFileSync(argv.config)));
+        const config = tryor(function() { return String(fs.readFileSync(argv.config)) }, null);
+        if (!config) {
+            console.error("error: config file not found <%s>", argv.config);
+            process.exit(-1);
+        }
+        const json = tryor(function() { return JSON.parse(config) }, null);
+        if (!json) {
+            console.error("error: config file is not valid JSON <%s>", argv.config);
+            process.exit(-1);
+        }
+        return json;
     }
 
     let path = "";
@@ -59,7 +73,7 @@ function findAndReadConfig() {
                 return JSON.parse(String(fs.readFileSync(filenamePath)));
             }, null);
             if (config === null) {
-                console.error("error: bad JSON in %s", filenamePath);
+                console.error("error: config file is not valid JSON <%s>", filenamePath);
                 process.exit(-1);
             }
             return config;
