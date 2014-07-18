@@ -21,6 +21,8 @@ more information about `let`, `const` and `defs.js`. See also the blog post
 
 Then run it as `defs file.js`. The errors (if any) will go to stderr,
 the transpiled source to `stdout`, so redirect it like `defs file.js > output.js`.
+
+Configuration may be provided with `--config`: `defs --config path/to/defs-config.json file.js > output.js` 
 More command line options are coming.
 
 There's also a [Grunt](http://gruntjs.com/) plugin, see [grunt-defs](https://npmjs.org/package/grunt-defs).
@@ -36,8 +38,8 @@ See [CHANGES.md](CHANGES.md).
 
 
 ## Configuration
-`defs` looks for a `defs-config.json` configuration file in your current
-directory. If not found there, it searches parent directories until it hits `/`.
+If configuration is not provided using `--config` `defs` looks for a `defs-config.json` configuration file in your 
+current directory. If not found there, it searches parent directories until it hits `/`.
 
 Example `defs-config.json`:
 

@@ -4,12 +4,17 @@ const fs = require("fs");
 const fmt = require("simple-fmt");
 const tryor = require("tryor");
 const defs = require("./defs-main");
+const yargs = require("yargs")
+    .options('config', {
+        describe: "path to defs config",
+    });
+const argv = yargs.argv;
 
-if (process.argv.length <= 2) {
-    console.log("USAGE: defs file.js");
+if (!argv._.length) {
+    console.log("USAGE: defs [options] file.js");
     process.exit(-1);
 }
-const filename = process.argv[2];
+const filename = argv._[0];
 
 if (!fs.existsSync(filename)) {
     console.log(fmt("error: file not found <{0}>", filename));
@@ -39,6 +44,10 @@ if (ret.src) {
 }
 
 function findAndReadConfig() {
+    if (argv.config) {
+        return JSON.parse(String(fs.readFileSync(argv.config)));
+    }
+
     let path = "";
     let filename = "defs-config.json";
     let filenamePath = null;
