@@ -4,14 +4,33 @@ const fs = require("fs");
 const fmt = require("simple-fmt");
 const tryor = require("tryor");
 const defs = require("./defs-main");
-const version = require("./package.json").version;
+const pkg = require('./package.json');
 const yargs = require("yargs")
-    .options("config", {});
+    .options("config", {})
+    .options("no-update-notifier", {});
 const argv = yargs.argv;
+
+if (!argv.noUpdateNotifier) {
+    const updateNotifier = require('update-notifier');
+    const notifier = updateNotifier({
+        packageName: pkg.name,
+        packageVersion: pkg.version,
+    });
+
+    if (notifier.update) {
+        const update = [
+            "defs v" + pkg.version + "",
+            "",
+            "Update available: " + notifier.update.latest,
+        ].join("\n");
+        console.error(update);
+        process.exit(-1);
+    }
+}
 
 if (!argv._.length) {
     const usage = [
-        "defs v" + version + "",
+        "defs v" + pkg.version + "",
         "",
         "Usage: defs OPTIONS <file>",
         "",
