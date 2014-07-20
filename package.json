@@ -17,7 +17,8 @@
     "stringmap": "~0.2.2",
     "stringset": "~0.2.1",
     "tryor": "~0.1.2",
-    "yargs": "~1.2.6"
+    "yargs": "~1.2.6",
+    "update-notifier": "~0.2.0"
   },
   "devDependencies": {
     "diff": "~1.0.8"
