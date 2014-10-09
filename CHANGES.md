@@ -1,3 +1,6 @@
+## v1.0.1 2014-10-09
+ * Bump yargs dependency to get rid of transitive ^ dependencies
+
 ## v1.0.0 2014-07-18
  * Use bleeding edge Esprima (harmony branch)
  * Support ForOfStatement (issue #24)
