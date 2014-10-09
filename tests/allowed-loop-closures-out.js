@@ -76,9 +76,9 @@ for (var x$6 in [0,1,2]) {(function(x){
 
 // Block-less For-In
 for (var x$7 in [0,1,2]) (function(x){arr.push(function() { return x; });}).call(this, x$7);/*with semicolon*/
-for (var x$8 in [0,1,2]) (function(x){arr.push(function() { return x; })/*no semicolon*/
+for (var x$8 in [0,1,2]) (function(x){arr.push(function() { return x; })}).call(this, x$8);/*no semicolon*/
 
-}).call(this, x$8);null; // previous semicolon-less for statement's range ends just before 'n' in 'null'
+null; // previous semicolon-less for statement's range ends just before 'n' in 'null'
 
 // For-Of
 for (var x$9 of [0,1,2]) {(function(x){
@@ -87,9 +87,9 @@ for (var x$9 of [0,1,2]) {(function(x){
 
 // Block-less For-Of
 for (var x$10 of [0,1,2]) (function(x){arr.push(function() { return x; });}).call(this, x$10);/*with semicolon*/
-for (var x$11 of [0,1,2]) (function(x){arr.push(function() { return x; })/*no semicolon*/
+for (var x$11 of [0,1,2]) (function(x){arr.push(function() { return x; })}).call(this, x$11);/*no semicolon*/
 
-}).call(this, x$11);null; // previous semicolon-less for statement's range ends just before 'n' in 'null'
+null; // previous semicolon-less for statement's range ends just before 'n' in 'null'
 
 // While
 while (true) {(function(){
