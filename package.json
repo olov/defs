@@ -11,7 +11,7 @@
     "alter": "~0.2.0",
     "ast-traverse": "~0.1.1",
     "breakable": "~1.0.0",
-    "esprima": "git://github.com/ariya/esprima.git#harmony",
+    "esprima-fb": "~8001.1001.0-dev-harmony-fb",
     "simple-fmt": "~0.1.0",
     "simple-is": "~0.2.0",
     "stringmap": "~0.2.2",
