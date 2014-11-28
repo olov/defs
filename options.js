@@ -4,5 +4,5 @@ module.exports = {
     disallowVars: false,
     disallowDuplicated: true,
     disallowUnknownReferences: true,
-    parse: require("esprima").parse,
+    parse: require("esprima-fb").parse,
 };
