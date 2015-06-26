@@ -71,6 +71,11 @@ function isLvalue(node) {
 function createScopes(node, parent) {
     assert(!node.$scope);
 
+    // https://github.com/jquery/esprima/issues/1030
+    if (node.type === 'TryStatement') {
+        delete node.handlers;
+    }
+
     node.$parent = parent;
     node.$scope = node.$parent ? node.$parent.$scope : null; // may be overridden
 
