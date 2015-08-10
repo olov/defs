@@ -80,7 +80,7 @@ function createScopes(node, parent) {
         node.$scope = new Scope({
             kind: "hoist",
             node: node,
-            parent: null,
+            parent: null
         });
 
     } else if (isFunction(node)) {
@@ -90,7 +90,7 @@ function createScopes(node, parent) {
         node.$scope = new Scope({
             kind: "hoist",
             node: node,
-            parent: node.$parent.$scope,
+            parent: node.$parent.$scope
         });
 
         // function has a name
@@ -130,7 +130,7 @@ function createScopes(node, parent) {
         node.$scope = new Scope({
             kind: "block",
             node: node,
-            parent: node.$parent.$scope,
+            parent: node.$parent.$scope
         });
 
     } else if (isNonFunctionBlock(node)) {
@@ -138,7 +138,7 @@ function createScopes(node, parent) {
         node.$scope = new Scope({
             kind: "block",
             node: node,
-            parent: node.$parent.$scope,
+            parent: node.$parent.$scope
         });
 
     } else if (node.type === "CatchClause") {
@@ -147,7 +147,7 @@ function createScopes(node, parent) {
         node.$scope = new Scope({
             kind: "catch-block",
             node: node,
-            parent: node.$parent.$scope,
+            parent: node.$parent.$scope
         });
         node.$scope.add(identifier.name, "caught", identifier, null);
 
@@ -179,13 +179,13 @@ function createTopScope(programScope, environments, globals) {
     const topScope = new Scope({
         kind: "hoist",
         node: {},
-        parent: null,
+        parent: null
     });
 
     const complementary = {
         undefined: false,
         Infinity: false,
-        console: false,
+        console: false
     };
 
     inject(complementary);
@@ -265,7 +265,7 @@ function varify(ast, stats, allIdentifiers, changes) {
             changes.push({
                 start: node.range[0],
                 end: node.range[0] + node.kind.length,
-                str: "var",
+                str: "var"
             });
 
             node.declarations.forEach(function(declarator) {
@@ -288,7 +288,7 @@ function varify(ast, stats, allIdentifiers, changes) {
                 origScope.moves = origScope.moves || stringmap();
                 origScope.moves.set(name, {
                     name: newName,
-                    scope: hoistScope,
+                    scope: hoistScope
                 });
 
                 allIdentifiers.add(newName);
@@ -303,7 +303,7 @@ function varify(ast, stats, allIdentifiers, changes) {
                     changes.push({
                         start: declarator.id.range[0],
                         end: declarator.id.range[1],
-                        str: newName,
+                        str: newName
                     });
                 }
             });
@@ -345,7 +345,7 @@ function varify(ast, stats, allIdentifiers, changes) {
                 changes.push({
                     start: node.range[0],
                     end: node.range[1],
-                    str: move.name,
+                    str: move.name
                 });
             }
         }
@@ -467,7 +467,7 @@ function transformLoopClosures(root, ops, options) {
         const op = {
             start: pos,
             end: pos,
-            str: str,
+            str: str
         }
         if (node) {
             op.node = node;
@@ -620,7 +620,7 @@ function run(src, config) {
 
     } else {
         return {
-            errors: ["Input was neither an AST object nor a string."],
+            errors: ["Input was neither an AST object nor a string."]
         };
     }
 
@@ -643,7 +643,7 @@ function run(src, config) {
 
     if (error.errors.length >= 1) {
         return {
-            errors: error.errors,
+            errors: error.errors
         };
     }
 
@@ -665,14 +665,14 @@ function run(src, config) {
         cleanupTree(ast);
         return {
             stats: stats,
-            ast: ast,
+            ast: ast
         };
     } else {
         // apply changes produced by varify and return the transformed src
         const transformedSrc = alter(src, changes);
         return {
             stats: stats,
-            src: transformedSrc,
+            src: transformedSrc
         };
     }
 }
