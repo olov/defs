@@ -16,7 +16,7 @@ if (!argv._.length) {
         "Usage: defs OPTIONS <file>",
         "",
         "Options: ",
-        "  --config  use specified defs-config.js instead of searching for it",
+        "  --config  use specified defs-config.js instead of searching for it"
     ].join("\n");
     console.error(usage);
     process.exit(-1);
